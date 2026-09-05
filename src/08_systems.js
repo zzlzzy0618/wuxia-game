@@ -72,16 +72,22 @@ function forgeInfo(slot) {
 }
 function starStr(n) { return '★'.repeat(n) + '☆'.repeat(10 - n); }
 function openForge() {
-  const slots = ['weapon', 'armor', 'acc'].map(slot => {
+  const slots = EQUIP_SLOTS.map(slot => {
     const f = forgeInfo(slot);
-    if (!f) return `<div class="list-row"><div class="grow"><b>${{ weapon: '兵刃', armor: '护甲', acc: '饰品' }[slot]}</b><small>尚未装备</small></div></div>`;
+    if (!f) return `<div class="list-row"><div class="grow"><b>${equipSlotName(slot)}</b><small>尚未装备</small></div></div>`;
     const mats = countMat(f.matTier);
     const needSoul = f.it.tier === 6;
     const soulOk = !needSoul || (P.bag['sp_jianhun'] || 0) >= 1;
     const can = f.star < 10 && mats >= f.matNeed && P.silver >= f.cost && soulOk;
-    const statTxt = f.it.slot === 'weapon'
-      ? `攻击 +${f.it.atk + forgeAdd(f.it.atk, f.id)}`
-      : f.it.slot === 'armor' ? `防御 +${f.it.def + forgeAdd(f.it.def, f.id)}` : f.it.desc.replace(/^.*——/, '');
+    let statTxt;
+    if (f.it.slot === 'weapon') statTxt = `攻击 +${f.it.atk + forgeAdd(f.it.atk, f.id)}`;
+    else if (f.it.slot === 'armor') statTxt = `防御 +${f.it.def + forgeAdd(f.it.def, f.id)}`;
+    else if (f.it.slot === 'acc') statTxt = f.it.desc.replace(/^.*——/, '');
+    else {
+      const CN = { atk: '攻击', def: '防御', spd: '身法', crt: '暴击', hp: '气血上限', mp: '内力上限' };
+      statTxt = ['atk', 'def', 'spd', 'crt', 'hp', 'mp'].filter(k => f.it[k] !== undefined)
+        .map(k => `${CN[k]} +${f.it[k] + forgeAdd(f.it[k], f.id)}`).join('，');
+    }
     return `<div class="list-row">
       <div class="grow"><b>${f.it.name}</b><span class="forge-star">${starStr(f.star)}</span>
         <small>${statTxt} · ${f.it.tier}阶装备 · 需 ${f.matTier}阶材料 ×${f.matNeed}（有 ${mats}）${needSoul ? ' · 剑魂 ×1' : ''} · 银两 ${f.cost} · 成功率 ${fmtPct(f.rate)}</small></div>

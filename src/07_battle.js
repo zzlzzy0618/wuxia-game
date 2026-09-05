@@ -15,6 +15,9 @@ function mkCompInstance(id) {
 }
 
 function startBattle(enemyTpl, opts = {}) {
+  // 自动历练遇强敌（头目/比武/悬赏）：自动暂停，交还操作权
+  if (AUTO.on && (opts.bossId || opts.tournament || opts.bountyKey)) stopAuto('强敌当前，自动历练暂停——这一战，请亲自出手！');
+  if (AUTO.on) AUTO.fights++;
   const e = JSON.parse(JSON.stringify(enemyTpl));
   e.hp = e.hpMax;
   B = {
@@ -74,9 +77,13 @@ function shakePanel(sel) {
   el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
 }
 
+// —— 战斗招式界面：分套路 / 内功 / 轻功三页签（被动招式不入选择）——
+let battleTab = 'rt';
+
 function renderBattleActions() {
   const box = $('#battle-actions');
-  const btns = [`<button class="btn btn-primary" data-skl="basic" data-mvi="0">普通攻击<small>不耗内力 · 拳脚兵刃招呼</small></button>`];
+  const groups = { rt: [], in: [], ag: [] };
+  groups.rt.push(`<button class="btn btn-primary" data-skl="basic" data-mvi="0">普通攻击<small>不耗内力 · 拳脚兵刃招呼</small></button>`);
   [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
     if (!id || !SKILLS[id]) return;
     const sk = SKILLS[id];
@@ -91,19 +98,89 @@ function renderBattleActions() {
         const fx = moveFxDesc(m);
         if (fx && fx !== '寻常招式') sub += ' · ' + fx;
       }
-      btns.push(`<button class="btn" data-skl="${id}" data-mvi="${i}" ${can ? '' : 'disabled'}>${m.name}<small>${sk.name} · ${m.mp ? '内力' + m.mp : '无消耗'} · ${sub}</small></button>`);
+      groups[sk.cat].push(`<button class="btn" data-skl="${id}" data-mvi="${i}" ${can ? '' : 'disabled'}>${m.name}<small>${sk.name} · ${m.mp ? '内力' + m.mp : '无消耗'} · ${sub}</small></button>`);
     });
   });
+  const tabs = ['rt', 'in', 'ag'].filter(c => groups[c].length);
+  if (!tabs.includes(battleTab)) battleTab = tabs[0] || 'rt';
+  const tabHtml = tabs.map(c =>
+    `<button class="btn btn-sm${battleTab === c ? ' btn-primary' : ''}" data-tab="${c}">${CAT_NAME[c]}</button>`).join('');
+  const paneHtml = tabs.map(c =>
+    `<div class="sk-pane${battleTab === c ? ' active' : ''}">${groups[c].join('')}</div>`).join('');
   const potBtns = Object.entries(P.bag).filter(([id]) => {
     const it = ITEMS[id];
     return it && it.cat === 'pot' && !POTIONS[it.pot].perm;
   }).map(([id, n]) => `<button class="btn btn-sm" data-pot="${id}">${ITEMS[id].name} ×${n}</button>`).join('');
-  const flee = B.noFlee ? '' : `<button class="btn" data-flee="1">逃 走</button>`;
-  box.innerHTML = btns.join('') + potBtns + flee;
+  const flee = B.noFlee ? '' : `<button class="btn btn-sm" data-flee="1">逃 走</button>`;
+  const stopBtn = AUTO.on ? `<button class="btn btn-sm" data-autostop="1">■ 停止自动</button>` : '';
+  box.innerHTML = (tabs.length > 1 ? `<div class="sk-tabs">${tabHtml}</div>` : '') + paneHtml + `<div class="sk-extra">${potBtns}${flee}${stopBtn}</div>`;
+  box.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { battleTab = b.dataset.tab; renderBattleActions(); }));
   box.querySelectorAll('[data-skl]').forEach(b => b.addEventListener('click', () => playerMove(b.dataset.skl, +b.dataset.mvi)));
   box.querySelectorAll('[data-pot]').forEach(b => b.addEventListener('click', () => playerPotion(b.dataset.pot)));
   const f = box.querySelector('[data-flee]');
   if (f) f.addEventListener('click', playerFlee);
+  const sb = box.querySelector('[data-autostop]');
+  if (sb) sb.addEventListener('click', () => stopAuto('你收势驻足，自动历练结束。'));
+  // 自动战斗：稍候自选招式
+  if (AUTO.on) setTimeout(autoBattleMove, 700);
+}
+
+// —— 自动战斗（自动探索时启用）——
+function battleHealPot() {
+  let best = null, bestV = -1;
+  Object.entries(P.bag).forEach(([id]) => {
+    const it = ITEMS[id];
+    if (!it || it.cat !== 'pot') return;
+    const p = POTIONS[it.pot];
+    if (p.perm) return;
+    const v = p.full ? P.hpMax : (p.pct ? P.hpMax * p.pct : (p.hp || 0));
+    if (v > bestV) { bestV = v; best = id; }
+  });
+  return best;
+}
+function findHealMove() {
+  let best = null;
+  if (P.inSkill && SKILLS[P.inSkill]) {
+    SKILLS[P.inSkill].moves.forEach((m, i) => {
+      if (m.t === 'act' && m.heal && moveUnlocked(m) && P.mp >= m.mp) best = { id: P.inSkill, i };
+    });
+  }
+  return best;
+}
+function autoBattleMove() {
+  if (!B || B.busy || !AUTO.on) return;
+  // 气血告急：先嗑药
+  if (P.hp < P.hpMax * .35) {
+    const pid = battleHealPot();
+    if (pid) return playerPotion(pid);
+  }
+  // 半血以下：内功疗伤
+  const hm = findHealMove();
+  if (hm && P.hp < P.hpMax * .55) return playerMove(hm.id, hm.i);
+  // 选威力最强的招式
+  let best = null, bs = 0;
+  [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
+    if (!id || !SKILLS[id]) return;
+    SKILLS[id].moves.forEach((m, i) => {
+      if (m.t !== 'act' || m.heal || !moveUnlocked(m)) return;
+      if (P.mp < m.mp) return;
+      if (m.hpCost && P.hp < P.hpMax * .5) return;
+      const s = m.mult * (m.hits || 1) * (m.mustCrit ? 1.7 : 1) * (m.ignoreDef ? 1.2 : 1) * (1 + (m.critBonus || 0) / 100);
+      if (s > bs) { bs = s; best = { id, i }; }
+    });
+  });
+  if (best) return playerMove(best.id, best.i);
+  // 内力枯竭：回内丹药，否则普攻
+  if (P.mp < 15) {
+    const mpPot = Object.keys(P.bag).find(id => {
+      const it = ITEMS[id];
+      if (!it || it.cat !== 'pot') return false;
+      const p = POTIONS[it.pot];
+      return !p.perm && (p.mp || p.pct || p.full);
+    });
+    if (mpPot) return playerPotion(mpPot);
+  }
+  playerMove('basic', 0);
 }
 
 // —— 玩家伤害计算（招式级） ——
@@ -425,17 +502,23 @@ function rollDrop() {
   }
   if (roll < .72) return 'tr_' + rnd(0, TREASURES.length - 1);
   if (roll < .88) {
-    const slot = rnd(0, 2);
-    if (slot === 0) {
+    const kind = rnd(0, 7);
+    if (kind === 0) {
       const tr = WTIER_LV.reduce((acc, need, i) => lv >= need ? i : acc, 0);
       return 'w_' + rnd(0, WTYPES.length - 1) + '_' + tr;
     }
-    if (slot === 1) {
+    if (kind === 1) {
       const tr = [1, 10, 20, 28, 36].reduce((acc, need, i) => lv >= need ? i : acc, 0);
       return 'a_' + rnd(0, ATYPES.length - 1) + '_' + tr;
     }
-    const tr = [5, 18, 32].reduce((acc, need, i) => lv >= need ? i : acc, 0);
-    return 'acc_' + rnd(0, ACC_TYPES.length - 1) + '_' + tr;
+    if (kind === 2) {
+      const tr = [5, 18, 32].reduce((acc, need, i) => lv >= need ? i : acc, 0);
+      return 'acc_' + rnd(0, ACC_TYPES.length - 1) + '_' + tr;
+    }
+    // 头饰 / 护腕 / 鞋子 / 戒指 / 腰带
+    const eq = EXTRA_EQUIP[kind - 3];
+    const tr = ETIER_LV.reduce((acc, need, i) => lv >= need ? i : acc, 0);
+    return eq.abbr + '_' + rnd(0, eq.shapes.length - 1) + '_' + tr;
   }
   return 'book_univ' + rnd(0, UNIVERSAL_SKILLS.length - 1);
 }
@@ -528,6 +611,12 @@ function victory() {
     return;
   }
   const ending = isChapterBoss && ctx.bossId === 'dongfangyao';
+  // 自动历练：寻常战斗不打断流程，只记一笔流水
+  if (AUTO.on) {
+    log(`「${e.name}」授首——经验 +${exp}，银两 +${silver}${drops.length ? '，拾得 ' + drops.join('、') : ''}。自动历练继续。`, 'good');
+    renderHome();
+    return;
+  }
   if (ending && !flags.ended) {
     flags.ended = true;
     save();
@@ -544,6 +633,7 @@ function victory() {
 }
 
 function defeat() {
+  if (AUTO.on) stopAuto('伤重败退，自动历练已停止。');
   const wasTour = B && B.tournament;
   B = null;
   Sfx.defeat();

@@ -221,25 +221,43 @@ function moveFxDesc(m) {
 }
 
 // —— 武学装配 ——
-// SKILLS: id -> {id, name, cat, lv, mp, mult, kind, sect, moves[5], desc}
+// SKILLS: id -> {id, name, cat, lv, mp, mult, kind, supreme, sect, moves[5], desc}
+// 出身体系：门派嫡传根基纯正，胜过江湖杂学；隐世绝学可遇不可求，
+// 其中八部「绝世神功」冠绝江湖，为全游戏最强武学
+const SKILL_ORIGIN = {
+  sect:    { mult: 1,   pas: 1.15, tag: '门派嫡传' },
+  univ:    { mult: .82, pas: .92,  tag: '江湖流传' },
+  hidden:  { mult: 1,   pas: 1.08, tag: '隐世所藏' },
+  supreme: { mult: 1.1, pas: 1.28, tag: '绝世神功' }
+};
 GEN.buildSkills = function () {
   const S = {
     basic: { id: 'basic', name: '普通攻击', cat: 'rt', mp: 0, mult: 1.0, lv: 1, kind: 'basic', moves: null, desc: '拳脚兵刃招呼，不耗内力。' }
   };
-  const build = (id, name, cat, t, fx, kind, sect) => {
+  const build = (id, name, cat, t, fx, kind, sect, supreme) => {
+    const org = SKILL_ORIGIN[supreme ? 'supreme' : kind] || SKILL_ORIGIN.sect;
     const sk = {
-      id, name, cat, kind, sect: sect || null,
+      id, name, cat, kind, supreme: !!supreme, sect: sect || null,
       lv: t.lv, mp: t.mp,
-      mult: Math.round(t.mult * ((fx && fx.mult) || 1) * 100) / 100,
+      mult: Math.round(t.mult * ((fx && fx.mult) || 1) * org.mult * 100) / 100,
       fx: fx || {}
     };
     sk.moves = genMoves(sk);
+    // 被动招式数值随出身增减（firstCrit 例外）
+    sk.moves.forEach(m => {
+      if (m.t !== 'pas' || !m.fx) return;
+      Object.keys(m.fx).forEach(k => {
+        if (k === 'firstCrit') return;
+        m.fx[k] = Math.round(m.fx[k] * org.pas * 10) / 10;
+      });
+    });
     const bestAct = sk.moves.filter(m => m.t === 'act' && m.mult > 0).reduce((a, b) => (b.mult * (b.hits || 1)) > (a.mult * (a.hits || 1)) ? b : a, { mult: 0, hits: 1 });
-    sk.desc = cat === 'in'
-      ? `内功心法——五式招法，蕴养生克敌之妙。`
+    const body = cat === 'in'
+      ? `内功心法，五式招法蕴养生克敌之妙。`
       : cat === 'ag'
-        ? `轻功身法——身轻如燕，来去如风。`
-        : `套路武学——绝招「${bestAct.name}」威力 ${Math.round(bestAct.mult * (bestAct.hits || 1) * 100) / 100} 倍。`;
+        ? `轻功身法，身轻如燕，来去如风。`
+        : `套路武学，绝招「${bestAct.name}」威力 ${Math.round(bestAct.mult * (bestAct.hits || 1) * 100) / 100} 倍。`;
+    sk.desc = `${org.tag} · ${body}`;
     return sk;
   };
   // 门派武学（按槽位序列分类）
@@ -250,17 +268,19 @@ GEN.buildSkills = function () {
       S[id] = build(id, name, SECT_SKILL_CATS[i], SKILL_TIERS[i], fx || {}, 'sect', sectId);
     });
   });
-  // 通用武学（秘籍）
+  // 通用武学（秘籍习得）：江湖杂学，阶级封顶、威力打折，逊于门派嫡传
   UNIVERSAL_SKILLS.forEach((def, i) => {
     const [name, fx] = def;
-    const t = SKILL_TIERS[Math.min(i * 2, 14)];
+    const t = SKILL_TIERS[Math.min(i * 2, 10)];
     S['univ' + i] = build('univ' + i, name, fx.cat, t, fx, 'univ');
   });
-  // 隐世武学
+  // 隐世武学：24 部寻常隐学（仍逊于本门至高武学）+ 8 部绝世神功（全游戏最强）
+  const SUPREME_HIDDEN = ['jiuyang', 'jiuyin', 'dugu', 'beiming', 'qiankun', 'taixuan', 'shenzhao', 'longxiang'];
   Object.entries(HIDDEN_SKILLS).forEach(([id, def]) => {
     const [name, fx] = def;
-    const t = SKILL_TIERS[13];
-    S[id] = build(id, name, fx.cat, { lv: fx.lv || t.lv, mult: t.mult, mp: t.mp }, fx, 'hidden');
+    const sup = SUPREME_HIDDEN.includes(id);
+    const t = sup ? { lv: 29, mult: SKILL_TIERS[14].mult, mp: 82 } : { lv: 25, mult: SKILL_TIERS[10].mult, mp: 52 };
+    S[id] = build(id, name, fx.cat, { lv: fx.lv || t.lv, mult: t.mult, mp: t.mp }, fx, 'hidden', null, sup);
   });
   return S;
 };
@@ -324,6 +344,23 @@ GEN.buildItems = function () {
       });
     });
   });
+  // 头饰/护腕/鞋子/戒指/腰带 5×3×5=75（独立装备槽）
+  const ECN = { atk: '攻击', def: '防御', spd: '身法', crt: '暴击', hp: '气血上限', mp: '内力上限' };
+  EXTRA_EQUIP.forEach(eq => {
+    eq.shapes.forEach((shape, si) => {
+      for (let tr = 0; tr < 5; tr++) {
+        const o = {
+          name: (eq.pre[tr] || '') + shape, cat: 'equip', slot: eq.key, tier: tr + 1, lv: ETIER_LV[tr],
+          price: ETIER_PRICE[tr]
+        };
+        o[eq.main] = eq.mv[tr];
+        let d = `${ECN[eq.main]} +${eq.mv[tr]}`;
+        if (eq.sv) { o[eq.sub] = eq.sv[tr]; d += `，${ECN[eq.sub]} +${eq.sv[tr]}`; }
+        o.desc = `${o.name}——${d}。`;
+        add(eq.abbr + '_' + si + '_' + tr, o);
+      }
+    });
+  });
   // 特殊装备（头目掉落）
   add('w_tiejian', { name: '精钢长剑', cat: 'equip', slot: 'weapon', tier: 2, lv: 4, atk: 10, price: 200, desc: '周霸的佩剑——攻击 +10。' });
   add('w_poJunjian', { name: '破军剑', cat: 'equip', slot: 'weapon', tier: 4, lv: 14, atk: 26, price: 1200, desc: '剑痴遗物，杀气凛然——攻击 +26。' });
@@ -353,7 +390,7 @@ GEN.buildItems = function () {
     const skillName = def[0];
     add('book_univ' + i, {
       name: '秘籍 · ' + BOOK_NAMES[skillName], cat: 'book', bookSkill: 'univ' + i,
-      price: 800 + i * 150, desc: `研读可习得「${skillName}」（${CAT_NAME[def[1].cat]}武学）。`
+      price: 800 + i * 150, desc: `研读可习得「${skillName}」（江湖${CAT_NAME[def[1].cat]}武学）。`
     });
   });
   // 奇物 18

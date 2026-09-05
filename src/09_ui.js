@@ -119,6 +119,10 @@ function renderHome() {
     : '<span class="muted" style="font-size:13px">孤身行走江湖（可在「伙伴」中招募随行）</span>';
   strip.querySelectorAll('.comp-chip').forEach(el => el.addEventListener('click', openCompanions));
 
+  const ab = $('#btn-auto');
+  ab.textContent = AUTO.on ? `■ 停止自动 · 已历${AUTO.fights}战` : '自动探索';
+  ab.title = AUTO.on ? '点击停止自动历练' : '自动历练：遇敌自战 · 伤重自歇 · 遇强敌自停';
+
   renderStatus();
   save();
 }
@@ -234,13 +238,18 @@ function gearByLv(lv) {
   const wTr = WTIER_LV.reduce((acc, need, i) => lv >= need ? i : acc, 0);
   const aTr = [1, 10, 20, 28, 36].reduce((acc, need, i) => lv >= need ? i : acc, 0);
   const cTr = [5, 18, 32].reduce((acc, need, i) => lv >= need ? i : acc, 0);
-  return [
+  const eTr = ETIER_LV.reduce((acc, need, i) => lv >= need ? i : acc, 0);
+  const gear = [
     'w_' + rnd(0, WTYPES.length - 1) + '_' + wTr,
     'w_' + rnd(0, WTYPES.length - 1) + '_' + wTr,
     'a_' + rnd(0, ATYPES.length - 1) + '_' + aTr,
     'a_' + rnd(0, ATYPES.length - 1) + '_' + aTr,
     'acc_' + rnd(0, ACC_TYPES.length - 1) + '_' + cTr
   ];
+  shuffle(EXTRA_EQUIP.slice()).slice(0, 3).forEach(eq => {
+    gear.push(eq.abbr + '_' + rnd(0, eq.shapes.length - 1) + '_' + eTr);
+  });
+  return gear;
 }
 function genShop() {
   if (!flags.shop) flags.shop = { round: 0, stock: [] };
@@ -296,7 +305,7 @@ function refreshShop() {
 }
 
 // ---------- 行囊 ----------
-function equipSlotName(slot) { return { weapon: '兵刃', armor: '护甲', acc: '饰品' }[slot]; }
+function equipSlotName(slot) { return { weapon: '兵刃', armor: '护甲', acc: '饰品', head: '头饰', wrist: '护腕', feet: '鞋子', ring: '戒指', belt: '腰带' }[slot]; }
 function openBag() {
   const cats = { equip: [], pot: [], mat: [], trs: [], book: [], sp: [] };
   Object.entries(P.bag).forEach(([id, n]) => {
@@ -305,13 +314,12 @@ function openBag() {
   });
   const equipHtml = cats.equip.map(([id, n]) => {
     const it = ITEMS[id];
-    const worn = P.weapon === id || P.armor === id || P.acc === id;
+    const worn = EQUIP_SLOTS.some(s => P[s] === id);
     const star = forgeStar(id);
     return `<div class="list-row ${worn ? 'equipped' : ''}">
       <div class="grow"><b>${it.name}</b>${n > 1 ? ' ×' + n : ''}${star ? ` <span class="forge-star">+${star}</span>` : ''}
         <small>${it.desc} · ${equipSlotName(it.slot)}</small></div>
-      ${worn ? '<span class="tag">装备中</span>' : `<button class="btn btn-sm btn-primary" data-eq="${id}">装备</button>`}
-      <button class="btn btn-sm" data-sell="${id}">售${Math.round(it.price / 2)}两</button>
+      ${worn ? '<span class="tag">装备中</span>' : `<button class="btn btn-sm btn-primary" data-eq="${id}">装备</button><button class="btn btn-sm" data-sell="${id}">售${Math.round(it.price / 2)}两</button>`}
     </div>`;
   }).join('') || '<p class="muted">尚无兵刃护甲。</p>';
 
@@ -345,11 +353,12 @@ function openBag() {
     </div>`;
   }).join('') || '<p class="muted">无秘籍。</p>';
 
+  const slotLine = EQUIP_SLOTS.map(s => {
+    const none = { weapon: '赤手空拳', armor: '粗衣布衫' }[s] || '无';
+    return `<b>${equipSlotName(s)}：</b>${P[s] ? esc(ITEMS[P[s]].name) + (forgeStar(P[s]) ? ' +' + forgeStar(P[s]) : '') : none}`;
+  }).join('　');
   modal('行囊 · 盘缠',
-    `<p><b>兵刃：</b>${P.weapon ? ITEMS[P.weapon].name + (forgeStar(P.weapon) ? ' +' + forgeStar(P.weapon) : '') : '赤手空拳'}
-    　<b>护甲：</b>${P.armor ? ITEMS[P.armor].name + (forgeStar(P.armor) ? ' +' + forgeStar(P.armor) : '') : '粗衣布衫'}
-    　<b>饰品：</b>${P.acc ? ITEMS[P.acc].name + (forgeStar(P.acc) ? ' +' + forgeStar(P.acc) : '') : '无'}
-    　<b>银两：</b><span class="gold">${P.silver}</span></p>
+    `<p style="line-height:2.1">${slotLine}<br>　<b>银两：</b><span class="gold">${P.silver}</span></p>
      <div class="divider"></div><p><b>装备</b></p>${equipHtml}
      <div class="divider"></div><p><b>丹药</b></p>${potHtml}
      <div class="divider"></div><p><b>秘籍</b></p>${bookHtml}
@@ -359,9 +368,8 @@ function openBag() {
 
   $('#modal-root').querySelectorAll('[data-eq]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.eq, it = ITEMS[id];
-    if (it.slot === 'weapon') P.weapon = id;
-    else if (it.slot === 'armor') P.armor = id;
-    else P.acc = id;
+    if (!EQUIP_SLOTS.includes(it.slot)) return;
+    P[it.slot] = id;
     recompute(); save();
     toast(`已装备「${it.name}」。`);
     closeModal(); renderStatus(); openBag();
@@ -413,9 +421,7 @@ function openBag() {
 function openStats() {
   const s = SECTS[P.sect];
   const stat = (label, val, sub) => `<div class="stat-cell"><span>${label}</span><b>${val}</b>${sub ? `<em>${sub}</em>` : ''}</div>`;
-  const gear = [
-    ['兵刃', P.weapon], ['护甲', P.armor], ['饰品', P.acc]
-  ].map(([k, id]) => `<div class="stat-cell"><span>${k}</span><b class="small">${id ? esc(ITEMS[id].name) + (forgeStar(id) ? ' +' + forgeStar(id) : '') : '无'}</b></div>`).join('');
+  const gear = EQUIP_SLOTS.map(s => `<div class="stat-cell"><span>${equipSlotName(s)}</span><b class="small">${P[s] ? esc(ITEMS[P[s]].name) + (forgeStar(P[s]) ? ' +' + forgeStar(P[s]) : '') : '无'}</b></div>`).join('');
   const slots = [
     ['主套路', P.rtSkill], ['副套路', P.rtSkill2], ['内功', P.inSkill], ['轻功', P.agSkill]
   ].map(([k, id]) => `<div class="stat-cell"><span>${k}</span><b class="small">${id ? esc(SKILLS[id].name) : '——'}</b><em>${id ? CAT_NAME[SKILLS[id].cat] + ' · ' + SKILLS[id].lv + '级' : '待运功'}</em></div>`).join('');
@@ -546,15 +552,22 @@ function openMap() {
 
 // ---------- 关于 ----------
 function about() {
+  const eqCnt = {}, catCnt = {};
+  Object.values(ITEMS).forEach(it => {
+    if (it.cat === 'equip') eqCnt[it.slot] = (eqCnt[it.slot] || 0) + 1;
+    catCnt[it.cat] = (catCnt[it.cat] || 0) + 1;
+  });
+  const n = k => eqCnt[k] || 0, c = k => catCnt[k] || 0;
   modal('关于《江湖录》',
     `<p>一款致敬金庸、古龙武侠世界的回合制 RPG，纯前端单文件，无需安装。</p>
      <div class="divider"></div>
      <p><b>十大门派</b>：各有 15 阶门派武学与独门被动心法。</p>
-     <p><b>二百余门武学</b>：分套路 · 内功 · 轻功三系，每门五式招法，主动被动相辅——门派 150 · 江湖秘籍 20 · 隐世绝学 32，共千余式招法。</p>
-     <p><b>三百余件物品</b>：兵刃 84 · 护甲 40 · 饰品 36 · 丹药 24 · 材料 40 · 珍宝 50 · 秘籍 20 · 奇物 18。</p>
+     <p><b>二百余门武学</b>：分套路 · 内功 · 轻功三系，每门五式招法，主动被动相辅——门派嫡传 150 · 江湖秘籍 20 · 隐世绝学 32（内含八部绝世神功），共千余式招法。<b>门派嫡传强于江湖杂学，唯隐世神功可盖其锋。</b></p>
+     <p><b>近四百件物品</b>：兵刃 ${n('weapon')} · 护甲 ${n('armor')} · 饰品 ${n('acc')} · 头饰 ${n('head')} · 护腕 ${n('wrist')} · 鞋子 ${n('feet')} · 戒指 ${n('ring')} · 腰带 ${n('belt')} · 丹药 ${c('pot')} · 材料 ${c('mat')} · 珍宝 ${c('trs')} · 秘籍 ${c('book')} · 奇物 ${c('sp')}。</p>
+     <p><b>八件装束</b>：兵刃 · 护甲 · 饰品之外，另有头饰、护腕、鞋子、戒指、腰带五处装束，皆可锻造强化。</p>
      <p><b>五十五处江湖</b>：八大地域，十章主线，十八头目。</p>
      <p><b>伙伴同行</b>：十六位江湖豪杰可招入麾下，至多两人随行出战。</p>
-     <p><b>玩法</b>：悬赏榜 · 锻造强化 · 比武大会 · 称号成就 · 隐世奇遇。</p>
+     <p><b>玩法</b>：自动历练 · 悬赏榜 · 锻造强化 · 比武大会 · 称号成就 · 隐世奇遇。</p>
      <div class="divider"></div>
      <p class="muted">同人练手之作，武林名号皆属原著。青山不改，绿水长流。</p>`,
     [{ label: '后会有期', primary: true }]);

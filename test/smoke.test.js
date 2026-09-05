@@ -93,7 +93,7 @@ const tests = `
     assert(SKILLS['univ' + i].name === d[0], 'univ' + i + ' 名称不对应');
   });
   // 通用/隐世武学倍率修正生效（mult 应为 tier 倍率而非原始小系数）
-  assert(SKILLS.univ0.mult >= 1, '基础剑法 mult 异常: ' + SKILLS.univ0.mult);
+  assert(SKILLS.univ0.mult > .8, '基础剑法 mult 异常: ' + SKILLS.univ0.mult);
   assert(SKILLS.dugu.mult > 3, '独孤九剑 mult 异常: ' + SKILLS.dugu.mult);
   // 武学三系 × 五式招法
   const catCount = { rt: 0, in: 0, ag: 0 };
@@ -152,7 +152,7 @@ const tests = `
   genBounties();
   assert(flags.bounty.list.length === 4, '悬赏刷新错误');
   ensureShop();
-  assert(flags.shop.stock.length === 8, '商店到货数量错误: ' + flags.shop.stock.length);
+  assert(flags.shop.stock.length === 11, '商店到货数量错误: ' + flags.shop.stock.length);
   flags.shop.stock.forEach(id => assert(ITEMS[id], '商店物品缺失: ' + id));
   // 锻造
   P.weapon = 'w_0_0'; P.forge = {}; recompute();
@@ -175,6 +175,43 @@ const tests = `
   assert(P.titles.includes('kill100') && P.titles.includes('boss10'), '称号未触发');
   if (errs.length) { console.error('[3] 系统错误:', errs); process.exit(1); }
   console.log('[3] 悬赏/商店/锻造/伙伴/称号 OK');
+
+  // ---- [3.5] 新装备槽 / 武学出身体系 ----
+  EXTRA_EQUIP.forEach(eq => {
+    assert(EQUIP_SLOTS.includes(eq.key), eq.label + ' 未纳入装备槽');
+    eq.shapes.forEach((shape, si) => {
+      for (let tr = 0; tr < 5; tr++) {
+        const id = eq.abbr + '_' + si + '_' + tr;
+        assert(ITEMS[id], '新装备缺失: ' + id);
+        assert(ITEMS[id][eq.main] > 0, id + ' 主属性异常');
+        if (eq.sub) assert(ITEMS[id][eq.sub] > 0, id + ' 副属性异常');
+        if (tr > 0) assert(ITEMS[id][eq.main] >= ITEMS[eq.abbr + '_' + si + '_' + (tr - 1)][eq.main], eq.label + ' 档位不递增 at tier ' + tr);
+      }
+    });
+  });
+  // 新装备属性计入人物
+  selectedSect = 'shaolin'; newGame();
+  const _def0 = P.def, _hp0 = P.hpMax, _atk0 = P.atk;
+  P.head = 'hd_0_2'; P.wrist = 'wr_1_2'; recompute();
+  assert(P.def > _def0 && P.hpMax > _hp0 && P.atk > _atk0, '头饰/护腕属性未计入 recompute');
+  P.head = null; P.wrist = null; recompute();
+  // 武学出身：门派嫡传 > 江湖流传；绝世神功冠绝隐世
+  const originTags = Object.values(SKILL_ORIGIN).map(o => o.tag);
+  Object.values(SKILLS).forEach(sk => {
+    if (sk.id === 'basic') return;
+    assert(originTags.some(t => sk.desc.startsWith(t)), sk.name + ' 缺少出身标记');
+  });
+  assert(SKILLS.univ0.mult < SKILLS.shaolin_s0.mult, '门派嫡传应强于同阶江湖武学');
+  const SUPREME = ['jiuyang', 'jiuyin', 'dugu', 'beiming', 'qiankun', 'taixuan', 'shenzhao', 'longxiang'];
+  SUPREME.forEach(id => {
+    assert(SKILLS[id].supreme === true, id + ' 应为绝世神功');
+    assert(SKILLS[id].desc.startsWith('绝世神功'), id + ' 出身标记错误');
+  });
+  const supMax = Math.max(...SUPREME.map(id => SKILLS[id].mult));
+  const hidMax = Math.max(...Object.keys(HIDDEN_SKILLS).filter(id => !SUPREME.includes(id)).map(id => SKILLS[id].mult));
+  assert(supMax > hidMax, '绝世神功应冠绝寻常隐世武学');
+  if (errs.length) { console.error('[3.5] 装备/出身错误:', errs); process.exit(1); }
+  console.log('[3.5] 五类新装备（' + EXTRA_EQUIP.reduce((a, e) => a + e.shapes.length * 5, 0) + '件）· 武学出身（门派>江湖 · 绝世神功冠绝）OK');
 
   // ---- [4] 新手战斗（lv1 vs 牛家村怪 ×30）----
   function setup(lv, sect, wTier, aTier) {
@@ -254,6 +291,41 @@ const tests = `
   }
   console.log('[4] 一级武当 vs 牛家村恶徒 30 场胜率: ' + Math.round(wins / 30 * 100) + '%');
   assert(wins >= 22, '新手战斗胜率过低: ' + wins + '/30');
+
+  // ---- [4.5] 战斗技能三页签（套路/内功/轻功，被动不入选择）----
+  setup(45, 'shaolin', 3, 3);
+  startBattle(GEN.mkEnemy('试炼木人', 40, {}), {});
+  const actHtml = document.querySelector('#battle-actions').innerHTML;
+  assert(actHtml.includes('sk-tabs'), '战斗技能界面缺少页签');
+  ['套路', '内功', '轻功'].forEach(n => assert(actHtml.includes('>' + n + '</button>'), '战斗页签缺少「' + n + '」'));
+  assert(actHtml.includes('普通攻击'), '套路页签缺少普通攻击');
+  [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
+    if (!id) return;
+    SKILLS[id].moves.forEach(m => {
+      if (m.t === 'pas' && moveUnlocked(m)) assert(!actHtml.includes('>' + m.name + '<'), '被动招式「' + m.name + '」不应出现在选择中');
+    });
+  });
+  B = null;
+  if (errs.length) { console.error('[4.5] 页签错误:', errs); process.exit(1); }
+  console.log('[4.5] 战斗三页签（套路/内功/轻功，被动招式不入选择）OK');
+
+  // ---- [4.6] 自动探索（遇敌自战 · 伤重自歇 · 可停）----
+  let tickFn = null, tickCleared = false;
+  const _si = global.setInterval, _ci = global.clearInterval;
+  global.setInterval = fn => { tickFn = fn; return 9; };
+  global.clearInterval = () => { tickCleared = true; };
+  toggleAuto();
+  assert(AUTO.on === true, '自动探索未能开启');
+  assert(typeof tickFn === 'function', '自动循环未启动');
+  for (let i = 0; i < 40 && AUTO.on; i++) tickFn();
+  assert(AUTO.fights >= 1, '自动历练未经历战斗: ' + AUTO.fights);
+  assert(P.hp > 0, '自动历练中重伤');
+  assert(B === null, '自动战斗未自行收场');
+  stopAuto();
+  assert(AUTO.on === false && tickCleared, '自动探索未能停止');
+  global.setInterval = _si; global.clearInterval = _ci;
+  if (errs.length) { console.error('[4.6] 自动探索错误:', errs); process.exit(1); }
+  console.log('[4.6] 自动探索 OK —— 连续自动历练 ' + AUTO.fights + ' 战，气血 ' + P.hp + '/' + P.hpMax);
 
   // ---- [5] Boss 平衡模拟（按建议等级与对应档位装备，无伙伴）----
   const plan = [

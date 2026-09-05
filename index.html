@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>江湖录 · 武侠RPG v2.1</title>
+<title>江湖录 · 武侠RPG v2.2</title>
 <style>
   :root{
     --ink:#17171c; --ink2:#22222a;
@@ -177,9 +177,14 @@
   #battle-log p.bad{color:var(--red-deep)}
   #battle-log p.sys{color:var(--gold-dim)}
   #battle-log p.ally{color:var(--blue)}
-  .skill-btns{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:12px}
-  .skill-btns .btn{font-size:14px;padding:7px 6px;letter-spacing:1px}
-  .skill-btns .btn small{display:block;font-size:11px;opacity:.7;letter-spacing:0;margin-top:2px}
+  .skill-wrap{margin-top:12px}
+  .sk-tabs{display:flex;gap:6px}
+  .sk-tabs .btn{flex:1;padding:6px 4px;font-size:14px;letter-spacing:3px}
+  .sk-pane{display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
+  .sk-pane.active{display:grid}
+  .sk-pane .btn{font-size:14px;padding:7px 6px;letter-spacing:1px}
+  .sk-pane .btn small{display:block;font-size:11px;opacity:.7;letter-spacing:0;margin-top:2px}
+  .sk-extra{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 
   #modal-root{position:fixed;inset:0;display:none;z-index:50}
   #modal-root.show{display:flex;align-items:center;justify-content:center;padding:16px}
@@ -231,7 +236,7 @@
       <button class="btn" id="btn-continue" style="display:none">重出江湖</button>
       <button class="btn" id="btn-about">关于此书</button>
     </div>
-    <div class="title-foot">致敬金庸 · 古龙 武侠世界 · 豪华版<br>十大门派 · 二百武学三系千招 · 三百珍品 · 五十五处江湖 · 伙伴同行<br>悬赏 · 锻造 · 比武大会 · 称号 · 隐世奇遇<br>同人练手之作 · 纯前端单文件 · 无需安装</div>
+    <div class="title-foot">致敬金庸 · 古龙 武侠世界 · 豪华版<br>十大门派 · 二百武学三系千招 · 三百七十珍品 · 八件装束 · 五十五处江湖 · 伙伴同行<br>自动历练 · 悬赏 · 锻造 · 比武大会 · 称号 · 隐世奇遇<br>同人练手之作 · 纯前端单文件 · 无需安装</div>
   </div>
 
   <div id="screen-create" class="screen">
@@ -267,6 +272,7 @@
       <div class="actions">
         <div class="grp">— 历 练 —</div>
         <button class="btn btn-primary" id="btn-explore">探 索</button>
+        <button class="btn btn-jade" id="btn-auto">自动探索</button>
         <button class="btn btn-primary" id="btn-boss" style="display:none"></button>
         <div class="grp">— 人 物 —</div>
         <button class="btn" id="btn-skills">武 学</button>
@@ -310,7 +316,7 @@
         <div class="bar mp"><i id="bt-mp-t"></i><div class="fill" id="bt-mp-f"></div></div>
       </div>
       <div id="battle-log"></div>
-      <div class="skill-btns" id="battle-actions"></div>
+      <div class="skill-wrap" id="battle-actions"></div>
     </div>
   </div>
 </div>
@@ -684,8 +690,6 @@ const A_METAL = ['皮甲', '软甲', '锁子甲', '重铠'];
 // 饰品：[类型, 三阶名称, 效果key, 三阶数值]
 const ACC_TYPES = [
   ['玉佩', ['白玉佩', '翠玉佩', '羊脂玉佩'], 'hp', [30, 80, 180]],
-  ['护腕', ['皮护腕', '铜护腕', '寒铁护腕'], 'atk', [2, 6, 12]],
-  ['戒指', ['银戒', '金戒', '翡翠戒'], 'crt', [2, 4, 7]],
   ['项链', ['珍珠链', '珊瑚链', '夜明珠链'], 'mp', [15, 40, 90]],
   ['面具', ['青铜面具', '鎏金面具', '鬼面'], 'spd', [1, 3, 6]],
   ['香囊', ['绣香囊', '沉水香囊', '龙涎香囊'], 'regen', [1, 2, 3]],
@@ -695,6 +699,18 @@ const ACC_TYPES = [
   ['发簪', ['木簪', '银簪', '金步摇'], 'spdcrt', [1, 2, 3]],
   ['披风', ['粗布披风', '锦缎披风', '白狐裘披风'], 'defspd', [1, 2, 4]],
   ['玉镯', ['玉镯', '翠玉镯', '暖玉镯'], 'hpmp', [20, 55, 120]]
+];
+
+// 五类独立装备槽：头饰 / 护腕 / 鞋子 / 戒指 / 腰带（各 3 形制 × 5 阶）
+// abbr: 物品id前缀；pre: 阶位前缀；main/mv: 主属性与五阶数值；sub/sv: 副属性（可无）
+const ETIER_LV = [1, 8, 16, 24, 32];
+const ETIER_PRICE = [45, 140, 420, 1200, 2800];
+const EXTRA_EQUIP = [
+  { key: 'head', abbr: 'hd', label: '头饰', shapes: ['皮风帽', '武士盔', '束发冠'], pre: ['', '厚实', '精制', '寒铁镶', '玄玉镶'], main: 'def', mv: [2, 4, 6, 9, 13], sub: 'hp', sv: [12, 30, 60, 105, 165] },
+  { key: 'wrist', abbr: 'wr', label: '护腕', shapes: ['布护腕', '皮护腕', '铜护腕'], pre: ['', '加厚', '精制', '寒铁镶', '玄铁镶'], main: 'atk', mv: [1, 3, 5, 8, 12] },
+  { key: 'feet', abbr: 'ft', label: '鞋子', shapes: ['麻鞋', '皮靴', '快靴'], pre: ['', '结实', '精制', '寒铁镶', '玄铁镶'], main: 'spd', mv: [1, 2, 3, 4, 6] },
+  { key: 'ring', abbr: 'rg', label: '戒指', shapes: ['铜戒', '银戒', '金戒'], pre: ['', '錾花', '镶玉', '镶翠', '镶血玉'], main: 'crt', mv: [1.5, 2.5, 4, 5.5, 7.5] },
+  { key: 'belt', abbr: 'bt', label: '腰带', shapes: ['麻绳', '布带', '革带'], pre: ['', '双股', '嵌钉', '铜扣', '玉扣'], main: 'def', mv: [1, 3, 4, 6, 9], sub: 'hp', sv: [8, 22, 45, 80, 130] }
 ];
 
 // 丹药（cat: pot）
@@ -903,8 +919,8 @@ const BOSSES = {
   jinlunseng: boss('蒙古国师 · 金轮僧', 24, { atkMul: 1.9, flavor: '"龙象般若，十龙十象之力！"', skills: [{ name: '五轮齐飞', mult: 2.75, chance: .5 }], reward: { silver: 2200, potions: { dahuan: 2 }, sp: 'feilin' } }),
   shalifei: boss('大漠凶鹰 · 沙里飞', 28, { flavor: '"大漠孤烟直，长河落日……刀！"', skills: [{ name: '连环旋风刀', mult: 2.45, chance: .42 }], reward: { silver: 3200, item: 'a_ruanweijia' } }),
   guimian: boss('鬼面判官', 31, { hpMul: 8.8, atkMul: 1.78, flavor: '"生死簿上，又添一名。"', skills: [{ name: '勾魂锁链', mult: 2.75, chance: .5 }], reward: { silver: 4500, potions: { dahuan: 3 } } }),
-  duanyanping: boss('大理逆徒 · 段延平', 35, { atkMul: 1.82, flavor: '"段氏的江山，本来就该是我的！"', skills: [{ name: '一阳指 · 邪焰', mult: 2.3, chance: .4 }, { name: '段家剑 · 血影', mult: 1.8, chance: .32 }], reward: { silver: 6500, potions: { xuelian: 2 }, sp: 'daliYudai' } }),
-  chenguiseng: boss('恶僧 · 成鬼僧', 39, { hpMul: 10.2, atkMul: 2.0, flavor: '"混元霹雳功成之日，便是尔等授首之时！"', skills: [{ name: '幻阴指', mult: 2.75, chance: .42 }], reward: { silver: 9000, skill: 'qiankun', sp: 'shenghuo' } }),
+  duanyanping: boss('大理逆徒 · 段延平', 35, { hpMul: 9.2, atkMul: 2.02, flavor: '"段氏的江山，本来就该是我的！"', skills: [{ name: '一阳指 · 邪焰', mult: 2.6, chance: .45 }, { name: '段家剑 · 血影', mult: 2.0, chance: .32 }], reward: { silver: 6500, potions: { xuelian: 2 }, sp: 'daliYudai' } }),
+  chenguiseng: boss('恶僧 · 成鬼僧', 39, { hpMul: 9.7, atkMul: 2.0, flavor: '"混元霹雳功成之日，便是尔等授首之时！"', skills: [{ name: '幻阴指', mult: 2.75, chance: .42 }], reward: { silver: 9000, skill: 'qiankun', sp: 'shenghuo' } }),
   dinglaoguai: boss('星宿老怪 · 丁老怪', 43, { flavor: '"星宿老仙，法力无边！"', skills: [{ name: '化功绵掌', mult: 2.45, chance: .4 }], reward: { silver: 12000, sp: 'shexinZhu' } }),
   yuehuagongzhu: boss('月华宫主', 47, { hpMul: 10.5, atkMul: 2.05, flavor: '"能接我三掌者，方可离去。"', skills: [{ name: '明玉掌', mult: 2.15, chance: .4 }, { name: '移花接玉', mult: 1.6, chance: .25, lifesteal: .45 }], reward: { silver: 18000, sp: 'jianhun' } }),
   dongfangyao: boss('魔教教主 · 东方曜', 50, { flavor: '"日出东方，唯我不败！"', skills: [{ name: '日月同辉', mult: 2.3, chance: .35 }, { name: '魔功滔天', mult: 2.6, chance: .25 }], reward: { silver: 50000 } }),
@@ -1199,25 +1215,43 @@ function moveFxDesc(m) {
 }
 
 // —— 武学装配 ——
-// SKILLS: id -> {id, name, cat, lv, mp, mult, kind, sect, moves[5], desc}
+// SKILLS: id -> {id, name, cat, lv, mp, mult, kind, supreme, sect, moves[5], desc}
+// 出身体系：门派嫡传根基纯正，胜过江湖杂学；隐世绝学可遇不可求，
+// 其中八部「绝世神功」冠绝江湖，为全游戏最强武学
+const SKILL_ORIGIN = {
+  sect:    { mult: 1,   pas: 1.15, tag: '门派嫡传' },
+  univ:    { mult: .82, pas: .92,  tag: '江湖流传' },
+  hidden:  { mult: 1,   pas: 1.08, tag: '隐世所藏' },
+  supreme: { mult: 1.1, pas: 1.28, tag: '绝世神功' }
+};
 GEN.buildSkills = function () {
   const S = {
     basic: { id: 'basic', name: '普通攻击', cat: 'rt', mp: 0, mult: 1.0, lv: 1, kind: 'basic', moves: null, desc: '拳脚兵刃招呼，不耗内力。' }
   };
-  const build = (id, name, cat, t, fx, kind, sect) => {
+  const build = (id, name, cat, t, fx, kind, sect, supreme) => {
+    const org = SKILL_ORIGIN[supreme ? 'supreme' : kind] || SKILL_ORIGIN.sect;
     const sk = {
-      id, name, cat, kind, sect: sect || null,
+      id, name, cat, kind, supreme: !!supreme, sect: sect || null,
       lv: t.lv, mp: t.mp,
-      mult: Math.round(t.mult * ((fx && fx.mult) || 1) * 100) / 100,
+      mult: Math.round(t.mult * ((fx && fx.mult) || 1) * org.mult * 100) / 100,
       fx: fx || {}
     };
     sk.moves = genMoves(sk);
+    // 被动招式数值随出身增减（firstCrit 例外）
+    sk.moves.forEach(m => {
+      if (m.t !== 'pas' || !m.fx) return;
+      Object.keys(m.fx).forEach(k => {
+        if (k === 'firstCrit') return;
+        m.fx[k] = Math.round(m.fx[k] * org.pas * 10) / 10;
+      });
+    });
     const bestAct = sk.moves.filter(m => m.t === 'act' && m.mult > 0).reduce((a, b) => (b.mult * (b.hits || 1)) > (a.mult * (a.hits || 1)) ? b : a, { mult: 0, hits: 1 });
-    sk.desc = cat === 'in'
-      ? `内功心法——五式招法，蕴养生克敌之妙。`
+    const body = cat === 'in'
+      ? `内功心法，五式招法蕴养生克敌之妙。`
       : cat === 'ag'
-        ? `轻功身法——身轻如燕，来去如风。`
-        : `套路武学——绝招「${bestAct.name}」威力 ${Math.round(bestAct.mult * (bestAct.hits || 1) * 100) / 100} 倍。`;
+        ? `轻功身法，身轻如燕，来去如风。`
+        : `套路武学，绝招「${bestAct.name}」威力 ${Math.round(bestAct.mult * (bestAct.hits || 1) * 100) / 100} 倍。`;
+    sk.desc = `${org.tag} · ${body}`;
     return sk;
   };
   // 门派武学（按槽位序列分类）
@@ -1228,17 +1262,19 @@ GEN.buildSkills = function () {
       S[id] = build(id, name, SECT_SKILL_CATS[i], SKILL_TIERS[i], fx || {}, 'sect', sectId);
     });
   });
-  // 通用武学（秘籍）
+  // 通用武学（秘籍习得）：江湖杂学，阶级封顶、威力打折，逊于门派嫡传
   UNIVERSAL_SKILLS.forEach((def, i) => {
     const [name, fx] = def;
-    const t = SKILL_TIERS[Math.min(i * 2, 14)];
+    const t = SKILL_TIERS[Math.min(i * 2, 10)];
     S['univ' + i] = build('univ' + i, name, fx.cat, t, fx, 'univ');
   });
-  // 隐世武学
+  // 隐世武学：24 部寻常隐学（仍逊于本门至高武学）+ 8 部绝世神功（全游戏最强）
+  const SUPREME_HIDDEN = ['jiuyang', 'jiuyin', 'dugu', 'beiming', 'qiankun', 'taixuan', 'shenzhao', 'longxiang'];
   Object.entries(HIDDEN_SKILLS).forEach(([id, def]) => {
     const [name, fx] = def;
-    const t = SKILL_TIERS[13];
-    S[id] = build(id, name, fx.cat, { lv: fx.lv || t.lv, mult: t.mult, mp: t.mp }, fx, 'hidden');
+    const sup = SUPREME_HIDDEN.includes(id);
+    const t = sup ? { lv: 29, mult: SKILL_TIERS[14].mult, mp: 82 } : { lv: 25, mult: SKILL_TIERS[10].mult, mp: 52 };
+    S[id] = build(id, name, fx.cat, { lv: fx.lv || t.lv, mult: t.mult, mp: t.mp }, fx, 'hidden', null, sup);
   });
   return S;
 };
@@ -1302,6 +1338,23 @@ GEN.buildItems = function () {
       });
     });
   });
+  // 头饰/护腕/鞋子/戒指/腰带 5×3×5=75（独立装备槽）
+  const ECN = { atk: '攻击', def: '防御', spd: '身法', crt: '暴击', hp: '气血上限', mp: '内力上限' };
+  EXTRA_EQUIP.forEach(eq => {
+    eq.shapes.forEach((shape, si) => {
+      for (let tr = 0; tr < 5; tr++) {
+        const o = {
+          name: (eq.pre[tr] || '') + shape, cat: 'equip', slot: eq.key, tier: tr + 1, lv: ETIER_LV[tr],
+          price: ETIER_PRICE[tr]
+        };
+        o[eq.main] = eq.mv[tr];
+        let d = `${ECN[eq.main]} +${eq.mv[tr]}`;
+        if (eq.sv) { o[eq.sub] = eq.sv[tr]; d += `，${ECN[eq.sub]} +${eq.sv[tr]}`; }
+        o.desc = `${o.name}——${d}。`;
+        add(eq.abbr + '_' + si + '_' + tr, o);
+      }
+    });
+  });
   // 特殊装备（头目掉落）
   add('w_tiejian', { name: '精钢长剑', cat: 'equip', slot: 'weapon', tier: 2, lv: 4, atk: 10, price: 200, desc: '周霸的佩剑——攻击 +10。' });
   add('w_poJunjian', { name: '破军剑', cat: 'equip', slot: 'weapon', tier: 4, lv: 14, atk: 26, price: 1200, desc: '剑痴遗物，杀气凛然——攻击 +26。' });
@@ -1331,7 +1384,7 @@ GEN.buildItems = function () {
     const skillName = def[0];
     add('book_univ' + i, {
       name: '秘籍 · ' + BOOK_NAMES[skillName], cat: 'book', bookSkill: 'univ' + i,
-      price: 800 + i * 150, desc: `研读可习得「${skillName}」（${CAT_NAME[def[1].cat]}武学）。`
+      price: 800 + i * 150, desc: `研读可习得「${skillName}」（江湖${CAT_NAME[def[1].cat]}武学）。`
     });
   });
   // 奇物 18
@@ -1376,6 +1429,11 @@ const SAVE_KEY = 'jianghulu_save_v2';
 
 let SKILLS = null;     // 装配后的武学表（init 时生成）
 let ITEMS = null;      // 装配后的物品表
+
+// 全部八个装备槽（字段名与 P 上字段一一对应）
+const EQUIP_SLOTS = ['weapon', 'armor', 'acc', 'head', 'wrist', 'feet', 'ring', 'belt'];
+// 自动探索 / 自动战斗
+const AUTO = { on: false, timer: null, fights: 0 };
 
 const expNeed = lv => Math.round(26 * Math.pow(lv, 1.5));
 
@@ -1539,6 +1597,21 @@ function recompute() {
       case 'hpmp': hp += v * 2; mp += v; break;
     }
   }
+  // 头饰/护腕/鞋子/戒指/腰带：主副属性均计入，锻造星级对每项属性生效
+  ['head', 'wrist', 'feet', 'ring', 'belt'].forEach(s => {
+    const it = P[s] && ITEMS[P[s]];
+    if (!it) return;
+    ['atk', 'def', 'spd', 'crt', 'hp', 'mp'].forEach(k => {
+      if (it[k] === undefined) return;
+      const v = it[k] + forgeAdd(it[k], it.id);
+      if (k === 'atk') atk += v;
+      else if (k === 'def') def += v;
+      else if (k === 'spd') spd += v;
+      else if (k === 'crt') crt += v;
+      else if (k === 'hp') hp += v;
+      else mp += v;
+    });
+  });
   if (hppct) hp *= 1 + hppct / 100;
   if (s.passive.id === 'royal') hp = Math.round(hp * 1.1);  // 大理：气血上限+10%
   if (atkp) atk = Math.round(atk * (1 + atkp / 100));
@@ -1627,18 +1700,24 @@ function checkTitles() {
     if (ok && !P.titles.includes(id)) { P.titles.push(id); gained.push(id); }
   });
   if (gained.length) {
+    const autoLogs = [];
     gained.forEach(id => {
       const t = TITLES[id];
       const fxTxt = Object.entries(t.fx).map(([k, v]) =>
         ({ hp: '气血', mp: '内力', atk: '攻击', def: '防御', spd: '身法', crt: '暴击%' }[k] || k) + '+' + v).join('，');
       const auto = titleScore(id) > titleScore(P.title);
       if (auto) P.title = id;
-      modal('称号 · ' + t.name,
-        `<p>江湖中人送你一个名号——<b style="color:var(--red)">${t.name}</b>。</p>
-         <p class="muted">${t.how}。佩戴称号：${fxTxt || '无加成'}。</p>
-         <p class="muted">${auto ? '加成更胜从前，已自动佩戴。' : '当前仍佩戴「' + TITLES[P.title].name + '」，可在「称号」中更换。'}</p>`,
-        [{ label: '不负此名', primary: true }]);
+      if (AUTO.on) {
+        autoLogs.push(`获得名号「${t.name}」${auto ? '（加成更胜从前，已自动佩戴）' : ''}`);
+      } else {
+        modal('称号 · ' + t.name,
+          `<p>江湖中人送你一个名号——<b style="color:var(--red)">${t.name}</b>。</p>
+           <p class="muted">${t.how}。佩戴称号：${fxTxt || '无加成'}。</p>
+           <p class="muted">${auto ? '加成更胜从前，已自动佩戴。' : '当前仍佩戴「' + TITLES[P.title].name + '」，可在「称号」中更换。'}</p>`,
+          [{ label: '不负此名', primary: true }], true);
+      }
     });
+    if (autoLogs.length) log('【名号】' + autoLogs.join('；'), 'good');
     recompute();
     save();
   }
@@ -1660,6 +1739,9 @@ function mkCompInstance(id) {
 }
 
 function startBattle(enemyTpl, opts = {}) {
+  // 自动历练遇强敌（头目/比武/悬赏）：自动暂停，交还操作权
+  if (AUTO.on && (opts.bossId || opts.tournament || opts.bountyKey)) stopAuto('强敌当前，自动历练暂停——这一战，请亲自出手！');
+  if (AUTO.on) AUTO.fights++;
   const e = JSON.parse(JSON.stringify(enemyTpl));
   e.hp = e.hpMax;
   B = {
@@ -1719,9 +1801,13 @@ function shakePanel(sel) {
   el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
 }
 
+// —— 战斗招式界面：分套路 / 内功 / 轻功三页签（被动招式不入选择）——
+let battleTab = 'rt';
+
 function renderBattleActions() {
   const box = $('#battle-actions');
-  const btns = [`<button class="btn btn-primary" data-skl="basic" data-mvi="0">普通攻击<small>不耗内力 · 拳脚兵刃招呼</small></button>`];
+  const groups = { rt: [], in: [], ag: [] };
+  groups.rt.push(`<button class="btn btn-primary" data-skl="basic" data-mvi="0">普通攻击<small>不耗内力 · 拳脚兵刃招呼</small></button>`);
   [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
     if (!id || !SKILLS[id]) return;
     const sk = SKILLS[id];
@@ -1736,19 +1822,89 @@ function renderBattleActions() {
         const fx = moveFxDesc(m);
         if (fx && fx !== '寻常招式') sub += ' · ' + fx;
       }
-      btns.push(`<button class="btn" data-skl="${id}" data-mvi="${i}" ${can ? '' : 'disabled'}>${m.name}<small>${sk.name} · ${m.mp ? '内力' + m.mp : '无消耗'} · ${sub}</small></button>`);
+      groups[sk.cat].push(`<button class="btn" data-skl="${id}" data-mvi="${i}" ${can ? '' : 'disabled'}>${m.name}<small>${sk.name} · ${m.mp ? '内力' + m.mp : '无消耗'} · ${sub}</small></button>`);
     });
   });
+  const tabs = ['rt', 'in', 'ag'].filter(c => groups[c].length);
+  if (!tabs.includes(battleTab)) battleTab = tabs[0] || 'rt';
+  const tabHtml = tabs.map(c =>
+    `<button class="btn btn-sm${battleTab === c ? ' btn-primary' : ''}" data-tab="${c}">${CAT_NAME[c]}</button>`).join('');
+  const paneHtml = tabs.map(c =>
+    `<div class="sk-pane${battleTab === c ? ' active' : ''}">${groups[c].join('')}</div>`).join('');
   const potBtns = Object.entries(P.bag).filter(([id]) => {
     const it = ITEMS[id];
     return it && it.cat === 'pot' && !POTIONS[it.pot].perm;
   }).map(([id, n]) => `<button class="btn btn-sm" data-pot="${id}">${ITEMS[id].name} ×${n}</button>`).join('');
-  const flee = B.noFlee ? '' : `<button class="btn" data-flee="1">逃 走</button>`;
-  box.innerHTML = btns.join('') + potBtns + flee;
+  const flee = B.noFlee ? '' : `<button class="btn btn-sm" data-flee="1">逃 走</button>`;
+  const stopBtn = AUTO.on ? `<button class="btn btn-sm" data-autostop="1">■ 停止自动</button>` : '';
+  box.innerHTML = (tabs.length > 1 ? `<div class="sk-tabs">${tabHtml}</div>` : '') + paneHtml + `<div class="sk-extra">${potBtns}${flee}${stopBtn}</div>`;
+  box.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { battleTab = b.dataset.tab; renderBattleActions(); }));
   box.querySelectorAll('[data-skl]').forEach(b => b.addEventListener('click', () => playerMove(b.dataset.skl, +b.dataset.mvi)));
   box.querySelectorAll('[data-pot]').forEach(b => b.addEventListener('click', () => playerPotion(b.dataset.pot)));
   const f = box.querySelector('[data-flee]');
   if (f) f.addEventListener('click', playerFlee);
+  const sb = box.querySelector('[data-autostop]');
+  if (sb) sb.addEventListener('click', () => stopAuto('你收势驻足，自动历练结束。'));
+  // 自动战斗：稍候自选招式
+  if (AUTO.on) setTimeout(autoBattleMove, 700);
+}
+
+// —— 自动战斗（自动探索时启用）——
+function battleHealPot() {
+  let best = null, bestV = -1;
+  Object.entries(P.bag).forEach(([id]) => {
+    const it = ITEMS[id];
+    if (!it || it.cat !== 'pot') return;
+    const p = POTIONS[it.pot];
+    if (p.perm) return;
+    const v = p.full ? P.hpMax : (p.pct ? P.hpMax * p.pct : (p.hp || 0));
+    if (v > bestV) { bestV = v; best = id; }
+  });
+  return best;
+}
+function findHealMove() {
+  let best = null;
+  if (P.inSkill && SKILLS[P.inSkill]) {
+    SKILLS[P.inSkill].moves.forEach((m, i) => {
+      if (m.t === 'act' && m.heal && moveUnlocked(m) && P.mp >= m.mp) best = { id: P.inSkill, i };
+    });
+  }
+  return best;
+}
+function autoBattleMove() {
+  if (!B || B.busy || !AUTO.on) return;
+  // 气血告急：先嗑药
+  if (P.hp < P.hpMax * .35) {
+    const pid = battleHealPot();
+    if (pid) return playerPotion(pid);
+  }
+  // 半血以下：内功疗伤
+  const hm = findHealMove();
+  if (hm && P.hp < P.hpMax * .55) return playerMove(hm.id, hm.i);
+  // 选威力最强的招式
+  let best = null, bs = 0;
+  [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
+    if (!id || !SKILLS[id]) return;
+    SKILLS[id].moves.forEach((m, i) => {
+      if (m.t !== 'act' || m.heal || !moveUnlocked(m)) return;
+      if (P.mp < m.mp) return;
+      if (m.hpCost && P.hp < P.hpMax * .5) return;
+      const s = m.mult * (m.hits || 1) * (m.mustCrit ? 1.7 : 1) * (m.ignoreDef ? 1.2 : 1) * (1 + (m.critBonus || 0) / 100);
+      if (s > bs) { bs = s; best = { id, i }; }
+    });
+  });
+  if (best) return playerMove(best.id, best.i);
+  // 内力枯竭：回内丹药，否则普攻
+  if (P.mp < 15) {
+    const mpPot = Object.keys(P.bag).find(id => {
+      const it = ITEMS[id];
+      if (!it || it.cat !== 'pot') return false;
+      const p = POTIONS[it.pot];
+      return !p.perm && (p.mp || p.pct || p.full);
+    });
+    if (mpPot) return playerPotion(mpPot);
+  }
+  playerMove('basic', 0);
 }
 
 // —— 玩家伤害计算（招式级） ——
@@ -2070,17 +2226,23 @@ function rollDrop() {
   }
   if (roll < .72) return 'tr_' + rnd(0, TREASURES.length - 1);
   if (roll < .88) {
-    const slot = rnd(0, 2);
-    if (slot === 0) {
+    const kind = rnd(0, 7);
+    if (kind === 0) {
       const tr = WTIER_LV.reduce((acc, need, i) => lv >= need ? i : acc, 0);
       return 'w_' + rnd(0, WTYPES.length - 1) + '_' + tr;
     }
-    if (slot === 1) {
+    if (kind === 1) {
       const tr = [1, 10, 20, 28, 36].reduce((acc, need, i) => lv >= need ? i : acc, 0);
       return 'a_' + rnd(0, ATYPES.length - 1) + '_' + tr;
     }
-    const tr = [5, 18, 32].reduce((acc, need, i) => lv >= need ? i : acc, 0);
-    return 'acc_' + rnd(0, ACC_TYPES.length - 1) + '_' + tr;
+    if (kind === 2) {
+      const tr = [5, 18, 32].reduce((acc, need, i) => lv >= need ? i : acc, 0);
+      return 'acc_' + rnd(0, ACC_TYPES.length - 1) + '_' + tr;
+    }
+    // 头饰 / 护腕 / 鞋子 / 戒指 / 腰带
+    const eq = EXTRA_EQUIP[kind - 3];
+    const tr = ETIER_LV.reduce((acc, need, i) => lv >= need ? i : acc, 0);
+    return eq.abbr + '_' + rnd(0, eq.shapes.length - 1) + '_' + tr;
   }
   return 'book_univ' + rnd(0, UNIVERSAL_SKILLS.length - 1);
 }
@@ -2173,6 +2335,12 @@ function victory() {
     return;
   }
   const ending = isChapterBoss && ctx.bossId === 'dongfangyao';
+  // 自动历练：寻常战斗不打断流程，只记一笔流水
+  if (AUTO.on) {
+    log(`「${e.name}」授首——经验 +${exp}，银两 +${silver}${drops.length ? '，拾得 ' + drops.join('、') : ''}。自动历练继续。`, 'good');
+    renderHome();
+    return;
+  }
   if (ending && !flags.ended) {
     flags.ended = true;
     save();
@@ -2189,6 +2357,7 @@ function victory() {
 }
 
 function defeat() {
+  if (AUTO.on) stopAuto('伤重败退，自动历练已停止。');
   const wasTour = B && B.tournament;
   B = null;
   Sfx.defeat();
@@ -2289,16 +2458,22 @@ function forgeInfo(slot) {
 }
 function starStr(n) { return '★'.repeat(n) + '☆'.repeat(10 - n); }
 function openForge() {
-  const slots = ['weapon', 'armor', 'acc'].map(slot => {
+  const slots = EQUIP_SLOTS.map(slot => {
     const f = forgeInfo(slot);
-    if (!f) return `<div class="list-row"><div class="grow"><b>${{ weapon: '兵刃', armor: '护甲', acc: '饰品' }[slot]}</b><small>尚未装备</small></div></div>`;
+    if (!f) return `<div class="list-row"><div class="grow"><b>${equipSlotName(slot)}</b><small>尚未装备</small></div></div>`;
     const mats = countMat(f.matTier);
     const needSoul = f.it.tier === 6;
     const soulOk = !needSoul || (P.bag['sp_jianhun'] || 0) >= 1;
     const can = f.star < 10 && mats >= f.matNeed && P.silver >= f.cost && soulOk;
-    const statTxt = f.it.slot === 'weapon'
-      ? `攻击 +${f.it.atk + forgeAdd(f.it.atk, f.id)}`
-      : f.it.slot === 'armor' ? `防御 +${f.it.def + forgeAdd(f.it.def, f.id)}` : f.it.desc.replace(/^.*——/, '');
+    let statTxt;
+    if (f.it.slot === 'weapon') statTxt = `攻击 +${f.it.atk + forgeAdd(f.it.atk, f.id)}`;
+    else if (f.it.slot === 'armor') statTxt = `防御 +${f.it.def + forgeAdd(f.it.def, f.id)}`;
+    else if (f.it.slot === 'acc') statTxt = f.it.desc.replace(/^.*——/, '');
+    else {
+      const CN = { atk: '攻击', def: '防御', spd: '身法', crt: '暴击', hp: '气血上限', mp: '内力上限' };
+      statTxt = ['atk', 'def', 'spd', 'crt', 'hp', 'mp'].filter(k => f.it[k] !== undefined)
+        .map(k => `${CN[k]} +${f.it[k] + forgeAdd(f.it[k], f.id)}`).join('，');
+    }
     return `<div class="list-row">
       <div class="grow"><b>${f.it.name}</b><span class="forge-star">${starStr(f.star)}</span>
         <small>${statTxt} · ${f.it.tier}阶装备 · 需 ${f.matTier}阶材料 ×${f.matNeed}（有 ${mats}）${needSoul ? ' · 剑魂 ×1' : ''} · 银两 ${f.cost} · 成功率 ${fmtPct(f.rate)}</small></div>
@@ -2570,6 +2745,10 @@ function renderHome() {
     : '<span class="muted" style="font-size:13px">孤身行走江湖（可在「伙伴」中招募随行）</span>';
   strip.querySelectorAll('.comp-chip').forEach(el => el.addEventListener('click', openCompanions));
 
+  const ab = $('#btn-auto');
+  ab.textContent = AUTO.on ? `■ 停止自动 · 已历${AUTO.fights}战` : '自动探索';
+  ab.title = AUTO.on ? '点击停止自动历练' : '自动历练：遇敌自战 · 伤重自歇 · 遇强敌自停';
+
   renderStatus();
   save();
 }
@@ -2685,13 +2864,18 @@ function gearByLv(lv) {
   const wTr = WTIER_LV.reduce((acc, need, i) => lv >= need ? i : acc, 0);
   const aTr = [1, 10, 20, 28, 36].reduce((acc, need, i) => lv >= need ? i : acc, 0);
   const cTr = [5, 18, 32].reduce((acc, need, i) => lv >= need ? i : acc, 0);
-  return [
+  const eTr = ETIER_LV.reduce((acc, need, i) => lv >= need ? i : acc, 0);
+  const gear = [
     'w_' + rnd(0, WTYPES.length - 1) + '_' + wTr,
     'w_' + rnd(0, WTYPES.length - 1) + '_' + wTr,
     'a_' + rnd(0, ATYPES.length - 1) + '_' + aTr,
     'a_' + rnd(0, ATYPES.length - 1) + '_' + aTr,
     'acc_' + rnd(0, ACC_TYPES.length - 1) + '_' + cTr
   ];
+  shuffle(EXTRA_EQUIP.slice()).slice(0, 3).forEach(eq => {
+    gear.push(eq.abbr + '_' + rnd(0, eq.shapes.length - 1) + '_' + eTr);
+  });
+  return gear;
 }
 function genShop() {
   if (!flags.shop) flags.shop = { round: 0, stock: [] };
@@ -2747,7 +2931,7 @@ function refreshShop() {
 }
 
 // ---------- 行囊 ----------
-function equipSlotName(slot) { return { weapon: '兵刃', armor: '护甲', acc: '饰品' }[slot]; }
+function equipSlotName(slot) { return { weapon: '兵刃', armor: '护甲', acc: '饰品', head: '头饰', wrist: '护腕', feet: '鞋子', ring: '戒指', belt: '腰带' }[slot]; }
 function openBag() {
   const cats = { equip: [], pot: [], mat: [], trs: [], book: [], sp: [] };
   Object.entries(P.bag).forEach(([id, n]) => {
@@ -2756,13 +2940,12 @@ function openBag() {
   });
   const equipHtml = cats.equip.map(([id, n]) => {
     const it = ITEMS[id];
-    const worn = P.weapon === id || P.armor === id || P.acc === id;
+    const worn = EQUIP_SLOTS.some(s => P[s] === id);
     const star = forgeStar(id);
     return `<div class="list-row ${worn ? 'equipped' : ''}">
       <div class="grow"><b>${it.name}</b>${n > 1 ? ' ×' + n : ''}${star ? ` <span class="forge-star">+${star}</span>` : ''}
         <small>${it.desc} · ${equipSlotName(it.slot)}</small></div>
-      ${worn ? '<span class="tag">装备中</span>' : `<button class="btn btn-sm btn-primary" data-eq="${id}">装备</button>`}
-      <button class="btn btn-sm" data-sell="${id}">售${Math.round(it.price / 2)}两</button>
+      ${worn ? '<span class="tag">装备中</span>' : `<button class="btn btn-sm btn-primary" data-eq="${id}">装备</button><button class="btn btn-sm" data-sell="${id}">售${Math.round(it.price / 2)}两</button>`}
     </div>`;
   }).join('') || '<p class="muted">尚无兵刃护甲。</p>';
 
@@ -2796,11 +2979,12 @@ function openBag() {
     </div>`;
   }).join('') || '<p class="muted">无秘籍。</p>';
 
+  const slotLine = EQUIP_SLOTS.map(s => {
+    const none = { weapon: '赤手空拳', armor: '粗衣布衫' }[s] || '无';
+    return `<b>${equipSlotName(s)}：</b>${P[s] ? esc(ITEMS[P[s]].name) + (forgeStar(P[s]) ? ' +' + forgeStar(P[s]) : '') : none}`;
+  }).join('　');
   modal('行囊 · 盘缠',
-    `<p><b>兵刃：</b>${P.weapon ? ITEMS[P.weapon].name + (forgeStar(P.weapon) ? ' +' + forgeStar(P.weapon) : '') : '赤手空拳'}
-    　<b>护甲：</b>${P.armor ? ITEMS[P.armor].name + (forgeStar(P.armor) ? ' +' + forgeStar(P.armor) : '') : '粗衣布衫'}
-    　<b>饰品：</b>${P.acc ? ITEMS[P.acc].name + (forgeStar(P.acc) ? ' +' + forgeStar(P.acc) : '') : '无'}
-    　<b>银两：</b><span class="gold">${P.silver}</span></p>
+    `<p style="line-height:2.1">${slotLine}<br>　<b>银两：</b><span class="gold">${P.silver}</span></p>
      <div class="divider"></div><p><b>装备</b></p>${equipHtml}
      <div class="divider"></div><p><b>丹药</b></p>${potHtml}
      <div class="divider"></div><p><b>秘籍</b></p>${bookHtml}
@@ -2810,9 +2994,8 @@ function openBag() {
 
   $('#modal-root').querySelectorAll('[data-eq]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.eq, it = ITEMS[id];
-    if (it.slot === 'weapon') P.weapon = id;
-    else if (it.slot === 'armor') P.armor = id;
-    else P.acc = id;
+    if (!EQUIP_SLOTS.includes(it.slot)) return;
+    P[it.slot] = id;
     recompute(); save();
     toast(`已装备「${it.name}」。`);
     closeModal(); renderStatus(); openBag();
@@ -2864,9 +3047,7 @@ function openBag() {
 function openStats() {
   const s = SECTS[P.sect];
   const stat = (label, val, sub) => `<div class="stat-cell"><span>${label}</span><b>${val}</b>${sub ? `<em>${sub}</em>` : ''}</div>`;
-  const gear = [
-    ['兵刃', P.weapon], ['护甲', P.armor], ['饰品', P.acc]
-  ].map(([k, id]) => `<div class="stat-cell"><span>${k}</span><b class="small">${id ? esc(ITEMS[id].name) + (forgeStar(id) ? ' +' + forgeStar(id) : '') : '无'}</b></div>`).join('');
+  const gear = EQUIP_SLOTS.map(s => `<div class="stat-cell"><span>${equipSlotName(s)}</span><b class="small">${P[s] ? esc(ITEMS[P[s]].name) + (forgeStar(P[s]) ? ' +' + forgeStar(P[s]) : '') : '无'}</b></div>`).join('');
   const slots = [
     ['主套路', P.rtSkill], ['副套路', P.rtSkill2], ['内功', P.inSkill], ['轻功', P.agSkill]
   ].map(([k, id]) => `<div class="stat-cell"><span>${k}</span><b class="small">${id ? esc(SKILLS[id].name) : '——'}</b><em>${id ? CAT_NAME[SKILLS[id].cat] + ' · ' + SKILLS[id].lv + '级' : '待运功'}</em></div>`).join('');
@@ -2997,15 +3178,22 @@ function openMap() {
 
 // ---------- 关于 ----------
 function about() {
+  const eqCnt = {}, catCnt = {};
+  Object.values(ITEMS).forEach(it => {
+    if (it.cat === 'equip') eqCnt[it.slot] = (eqCnt[it.slot] || 0) + 1;
+    catCnt[it.cat] = (catCnt[it.cat] || 0) + 1;
+  });
+  const n = k => eqCnt[k] || 0, c = k => catCnt[k] || 0;
   modal('关于《江湖录》',
     `<p>一款致敬金庸、古龙武侠世界的回合制 RPG，纯前端单文件，无需安装。</p>
      <div class="divider"></div>
      <p><b>十大门派</b>：各有 15 阶门派武学与独门被动心法。</p>
-     <p><b>二百余门武学</b>：分套路 · 内功 · 轻功三系，每门五式招法，主动被动相辅——门派 150 · 江湖秘籍 20 · 隐世绝学 32，共千余式招法。</p>
-     <p><b>三百余件物品</b>：兵刃 84 · 护甲 40 · 饰品 36 · 丹药 24 · 材料 40 · 珍宝 50 · 秘籍 20 · 奇物 18。</p>
+     <p><b>二百余门武学</b>：分套路 · 内功 · 轻功三系，每门五式招法，主动被动相辅——门派嫡传 150 · 江湖秘籍 20 · 隐世绝学 32（内含八部绝世神功），共千余式招法。<b>门派嫡传强于江湖杂学，唯隐世神功可盖其锋。</b></p>
+     <p><b>近四百件物品</b>：兵刃 ${n('weapon')} · 护甲 ${n('armor')} · 饰品 ${n('acc')} · 头饰 ${n('head')} · 护腕 ${n('wrist')} · 鞋子 ${n('feet')} · 戒指 ${n('ring')} · 腰带 ${n('belt')} · 丹药 ${c('pot')} · 材料 ${c('mat')} · 珍宝 ${c('trs')} · 秘籍 ${c('book')} · 奇物 ${c('sp')}。</p>
+     <p><b>八件装束</b>：兵刃 · 护甲 · 饰品之外，另有头饰、护腕、鞋子、戒指、腰带五处装束，皆可锻造强化。</p>
      <p><b>五十五处江湖</b>：八大地域，十章主线，十八头目。</p>
      <p><b>伙伴同行</b>：十六位江湖豪杰可招入麾下，至多两人随行出战。</p>
-     <p><b>玩法</b>：悬赏榜 · 锻造强化 · 比武大会 · 称号成就 · 隐世奇遇。</p>
+     <p><b>玩法</b>：自动历练 · 悬赏榜 · 锻造强化 · 比武大会 · 称号成就 · 隐世奇遇。</p>
      <div class="divider"></div>
      <p class="muted">同人练手之作，武林名号皆属原著。青山不改，绿水长流。</p>`,
     [{ label: '后会有期', primary: true }]);
@@ -3019,7 +3207,7 @@ function newGame() {
     hp: 1, mp: 1, hpMax: 1, mpMax: 1, atk: 0, def: 0, spd: 0, crt: 0, regen: 0,
     silver: 120,
     bag: { pot_jinchuang: 3, pot_neixi: 2 },
-    weapon: null, armor: null, acc: null, forge: {},
+    weapon: null, armor: null, acc: null, head: null, wrist: null, feet: null, ring: null, belt: null, forge: {},
     skills: ['basic'],
     rtSkill: null, rtSkill2: null, inSkill: null, agSkill: null,
     bonus: { hp: 0, mp: 0, atk: 0, def: 0, spd: 0, crt: 0 },
@@ -3075,8 +3263,12 @@ function gainExp(n) {
     recompute();
     P.hp = P.hpMax; P.mp = P.mpMax;
     Sfx.levelup();
-    log(ups[0].replace(/<[^>]+>/g, ''), 'good');
-    modal('武学精进', ups.map(u => `<p>🎉 ${u}</p>`).join(''));
+    if (AUTO.on) {
+      log('【精进】' + ups.map(u => u.replace(/<[^>]+>/g, '')).join('；'), 'good');
+    } else {
+      log(ups[0].replace(/<[^>]+>/g, ''), 'good');
+      modal('武学精进', ups.map(u => `<p>🎉 ${u}</p>`).join(''));
+    }
     checkTitles();
     save();
   }
@@ -3109,6 +3301,13 @@ function explore() {
     }
     Sfx.levelup();
     log(`【奇遇】${ev.title}！`, 'sys');
+    // 自动历练：奇遇不打断流程，收益记入日志
+    if (AUTO.on) {
+      if (gains.length) log(gains.map(g => g.replace(/<[^>]+>/g, '')).join('　'), 'good');
+      save();
+      renderHome();
+      return;
+    }
     modal(ev.title,
       `<p style="white-space:pre-line">${ev.text}</p>${gains.length ? '<div class="divider"></div>' + gains.map(g => `<p>${g}</p>`).join('') : ''}`,
       [{ label: '善哉', primary: true, fn: () => renderHome() }]);
@@ -3142,6 +3341,42 @@ function explore() {
     toast('茶棚闲话，江湖又多了一段传闻');
   }
   renderHome();
+}
+
+// ---------- 自动探索 ----------
+// 遇敌自战（见 07_battle.js autoBattleMove）· 伤重自歇 · 气血内力枯竭自停 · 强敌（头目/比武/悬赏）自停交还操作
+function toggleAuto() {
+  Sfx.ensure(); Sfx.click();
+  if (AUTO.on) return stopAuto('你收势驻足，自动历练结束。');
+  if (B) return toast('激战正酣，先了结眼前之敌。');
+  if (P.hp < P.hpMax * .3) return toast('伤势不轻，先歇息调养再自动历练。');
+  AUTO.on = true;
+  AUTO.fights = 0;
+  log('你放开脚程，开始自动历练——遇敌自战，伤重自歇，遇强敌则驻足。', 'sys');
+  toast('自动探索开始');
+  AUTO.timer = setInterval(autoTick, 2600);
+  renderHome();
+  autoTick();
+}
+function autoTick() {
+  if (!AUTO.on || !P) return;
+  if (B) return; // 战斗中由自动战斗接管，下一拍再来
+  // 伤势过半：先投宿客栈
+  if (P.hp < P.hpMax * .55) {
+    const cost = 4 * P.lv + 6;
+    if (P.silver >= cost) rest();
+    else if (P.hp < P.hpMax * .4) return stopAuto('气血不济，又无盘缠歇脚——自动历练停止。');
+  }
+  if (P.hp < P.hpMax * .25 || P.mp < 10) return stopAuto('气血内力不济，自动历练停止。');
+  explore();
+}
+function stopAuto(msg) {
+  if (!AUTO.on) return;
+  clearInterval(AUTO.timer);
+  AUTO.timer = null;
+  AUTO.on = false;
+  if (msg) { log(msg, 'sys'); toast(msg); }
+  if (P) renderHome();
 }
 
 // ---------- 头目挑战 ----------
@@ -3203,10 +3438,11 @@ function restoreSave(d) {
   P.comps = P.comps || []; P.compActive = P.compActive || [];
   P.titles = P.titles || ['newbie'];
   if (!P.titles.includes('newbie')) P.titles.push('newbie');
-  // 旧档迁移：补齐武学运功槽
+  // 旧档迁移：补齐武学运功槽与新增装束槽
   if (!P.rtSkill && !P.rtSkill2 && !P.inSkill && !P.agSkill) {
     P.skills.slice().forEach(id => autoEquip(id));
   }
+  EQUIP_SLOTS.forEach(s => { if (P[s] === undefined) P[s] = null; });
   curMap = flags.loc || 'niujiacun';
   if (!MAPS.find(m => m.id === curMap)) curMap = 'niujiacun';
   Sfx.muted = !!flags.muted;
@@ -3244,6 +3480,7 @@ function init() {
   }
 
   $('#btn-explore').addEventListener('click', explore);
+  $('#btn-auto').addEventListener('click', toggleAuto);
   $('#btn-travel').addEventListener('click', openMap);
   $('#btn-companions').addEventListener('click', openCompanions);
   $('#btn-bounty').addEventListener('click', openBounty);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>江湖录 · 武侠RPG v2.1</title>
+<title>江湖录 · 武侠RPG v2.2</title>
 <style>
   :root{
     --ink:#17171c; --ink2:#22222a;
@@ -177,9 +177,14 @@
   #battle-log p.bad{color:var(--red-deep)}
   #battle-log p.sys{color:var(--gold-dim)}
   #battle-log p.ally{color:var(--blue)}
-  .skill-btns{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:12px}
-  .skill-btns .btn{font-size:14px;padding:7px 6px;letter-spacing:1px}
-  .skill-btns .btn small{display:block;font-size:11px;opacity:.7;letter-spacing:0;margin-top:2px}
+  .skill-wrap{margin-top:12px}
+  .sk-tabs{display:flex;gap:6px}
+  .sk-tabs .btn{flex:1;padding:6px 4px;font-size:14px;letter-spacing:3px}
+  .sk-pane{display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
+  .sk-pane.active{display:grid}
+  .sk-pane .btn{font-size:14px;padding:7px 6px;letter-spacing:1px}
+  .sk-pane .btn small{display:block;font-size:11px;opacity:.7;letter-spacing:0;margin-top:2px}
+  .sk-extra{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 
   #modal-root{position:fixed;inset:0;display:none;z-index:50}
   #modal-root.show{display:flex;align-items:center;justify-content:center;padding:16px}
@@ -231,7 +236,7 @@
       <button class="btn" id="btn-continue" style="display:none">重出江湖</button>
       <button class="btn" id="btn-about">关于此书</button>
     </div>
-    <div class="title-foot">致敬金庸 · 古龙 武侠世界 · 豪华版<br>十大门派 · 二百武学三系千招 · 三百珍品 · 五十五处江湖 · 伙伴同行<br>悬赏 · 锻造 · 比武大会 · 称号 · 隐世奇遇<br>同人练手之作 · 纯前端单文件 · 无需安装</div>
+    <div class="title-foot">致敬金庸 · 古龙 武侠世界 · 豪华版<br>十大门派 · 二百武学三系千招 · 三百七十珍品 · 八件装束 · 五十五处江湖 · 伙伴同行<br>自动历练 · 悬赏 · 锻造 · 比武大会 · 称号 · 隐世奇遇<br>同人练手之作 · 纯前端单文件 · 无需安装</div>
   </div>
 
   <div id="screen-create" class="screen">
@@ -267,6 +272,7 @@
       <div class="actions">
         <div class="grp">— 历 练 —</div>
         <button class="btn btn-primary" id="btn-explore">探 索</button>
+        <button class="btn btn-jade" id="btn-auto">自动探索</button>
         <button class="btn btn-primary" id="btn-boss" style="display:none"></button>
         <div class="grp">— 人 物 —</div>
         <button class="btn" id="btn-skills">武 学</button>
@@ -310,7 +316,7 @@
         <div class="bar mp"><i id="bt-mp-t"></i><div class="fill" id="bt-mp-f"></div></div>
       </div>
       <div id="battle-log"></div>
-      <div class="skill-btns" id="battle-actions"></div>
+      <div class="skill-wrap" id="battle-actions"></div>
     </div>
   </div>
 </div>

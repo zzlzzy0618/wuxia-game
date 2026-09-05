@@ -10,6 +10,11 @@ const SAVE_KEY = 'jianghulu_save_v2';
 let SKILLS = null;     // 装配后的武学表（init 时生成）
 let ITEMS = null;      // 装配后的物品表
 
+// 全部八个装备槽（字段名与 P 上字段一一对应）
+const EQUIP_SLOTS = ['weapon', 'armor', 'acc', 'head', 'wrist', 'feet', 'ring', 'belt'];
+// 自动探索 / 自动战斗
+const AUTO = { on: false, timer: null, fights: 0 };
+
 const expNeed = lv => Math.round(26 * Math.pow(lv, 1.5));
 
 // —— 称号（成就系统，佩戴获得加成）——
@@ -172,6 +177,21 @@ function recompute() {
       case 'hpmp': hp += v * 2; mp += v; break;
     }
   }
+  // 头饰/护腕/鞋子/戒指/腰带：主副属性均计入，锻造星级对每项属性生效
+  ['head', 'wrist', 'feet', 'ring', 'belt'].forEach(s => {
+    const it = P[s] && ITEMS[P[s]];
+    if (!it) return;
+    ['atk', 'def', 'spd', 'crt', 'hp', 'mp'].forEach(k => {
+      if (it[k] === undefined) return;
+      const v = it[k] + forgeAdd(it[k], it.id);
+      if (k === 'atk') atk += v;
+      else if (k === 'def') def += v;
+      else if (k === 'spd') spd += v;
+      else if (k === 'crt') crt += v;
+      else if (k === 'hp') hp += v;
+      else mp += v;
+    });
+  });
   if (hppct) hp *= 1 + hppct / 100;
   if (s.passive.id === 'royal') hp = Math.round(hp * 1.1);  // 大理：气血上限+10%
   if (atkp) atk = Math.round(atk * (1 + atkp / 100));
@@ -260,18 +280,24 @@ function checkTitles() {
     if (ok && !P.titles.includes(id)) { P.titles.push(id); gained.push(id); }
   });
   if (gained.length) {
+    const autoLogs = [];
     gained.forEach(id => {
       const t = TITLES[id];
       const fxTxt = Object.entries(t.fx).map(([k, v]) =>
         ({ hp: '气血', mp: '内力', atk: '攻击', def: '防御', spd: '身法', crt: '暴击%' }[k] || k) + '+' + v).join('，');
       const auto = titleScore(id) > titleScore(P.title);
       if (auto) P.title = id;
-      modal('称号 · ' + t.name,
-        `<p>江湖中人送你一个名号——<b style="color:var(--red)">${t.name}</b>。</p>
-         <p class="muted">${t.how}。佩戴称号：${fxTxt || '无加成'}。</p>
-         <p class="muted">${auto ? '加成更胜从前，已自动佩戴。' : '当前仍佩戴「' + TITLES[P.title].name + '」，可在「称号」中更换。'}</p>`,
-        [{ label: '不负此名', primary: true }]);
+      if (AUTO.on) {
+        autoLogs.push(`获得名号「${t.name}」${auto ? '（加成更胜从前，已自动佩戴）' : ''}`);
+      } else {
+        modal('称号 · ' + t.name,
+          `<p>江湖中人送你一个名号——<b style="color:var(--red)">${t.name}</b>。</p>
+           <p class="muted">${t.how}。佩戴称号：${fxTxt || '无加成'}。</p>
+           <p class="muted">${auto ? '加成更胜从前，已自动佩戴。' : '当前仍佩戴「' + TITLES[P.title].name + '」，可在「称号」中更换。'}</p>`,
+          [{ label: '不负此名', primary: true }], true);
+      }
     });
+    if (autoLogs.length) log('【名号】' + autoLogs.join('；'), 'good');
     recompute();
     save();
   }

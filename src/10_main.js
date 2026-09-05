@@ -7,7 +7,7 @@ function newGame() {
     hp: 1, mp: 1, hpMax: 1, mpMax: 1, atk: 0, def: 0, spd: 0, crt: 0, regen: 0,
     silver: 120,
     bag: { pot_jinchuang: 3, pot_neixi: 2 },
-    weapon: null, armor: null, acc: null, forge: {},
+    weapon: null, armor: null, acc: null, head: null, wrist: null, feet: null, ring: null, belt: null, forge: {},
     skills: ['basic'],
     rtSkill: null, rtSkill2: null, inSkill: null, agSkill: null,
     bonus: { hp: 0, mp: 0, atk: 0, def: 0, spd: 0, crt: 0 },
@@ -63,8 +63,12 @@ function gainExp(n) {
     recompute();
     P.hp = P.hpMax; P.mp = P.mpMax;
     Sfx.levelup();
-    log(ups[0].replace(/<[^>]+>/g, ''), 'good');
-    modal('武学精进', ups.map(u => `<p>🎉 ${u}</p>`).join(''));
+    if (AUTO.on) {
+      log('【精进】' + ups.map(u => u.replace(/<[^>]+>/g, '')).join('；'), 'good');
+    } else {
+      log(ups[0].replace(/<[^>]+>/g, ''), 'good');
+      modal('武学精进', ups.map(u => `<p>🎉 ${u}</p>`).join(''));
+    }
     checkTitles();
     save();
   }
@@ -97,6 +101,13 @@ function explore() {
     }
     Sfx.levelup();
     log(`【奇遇】${ev.title}！`, 'sys');
+    // 自动历练：奇遇不打断流程，收益记入日志
+    if (AUTO.on) {
+      if (gains.length) log(gains.map(g => g.replace(/<[^>]+>/g, '')).join('　'), 'good');
+      save();
+      renderHome();
+      return;
+    }
     modal(ev.title,
       `<p style="white-space:pre-line">${ev.text}</p>${gains.length ? '<div class="divider"></div>' + gains.map(g => `<p>${g}</p>`).join('') : ''}`,
       [{ label: '善哉', primary: true, fn: () => renderHome() }]);
@@ -130,6 +141,42 @@ function explore() {
     toast('茶棚闲话，江湖又多了一段传闻');
   }
   renderHome();
+}
+
+// ---------- 自动探索 ----------
+// 遇敌自战（见 07_battle.js autoBattleMove）· 伤重自歇 · 气血内力枯竭自停 · 强敌（头目/比武/悬赏）自停交还操作
+function toggleAuto() {
+  Sfx.ensure(); Sfx.click();
+  if (AUTO.on) return stopAuto('你收势驻足，自动历练结束。');
+  if (B) return toast('激战正酣，先了结眼前之敌。');
+  if (P.hp < P.hpMax * .3) return toast('伤势不轻，先歇息调养再自动历练。');
+  AUTO.on = true;
+  AUTO.fights = 0;
+  log('你放开脚程，开始自动历练——遇敌自战，伤重自歇，遇强敌则驻足。', 'sys');
+  toast('自动探索开始');
+  AUTO.timer = setInterval(autoTick, 2600);
+  renderHome();
+  autoTick();
+}
+function autoTick() {
+  if (!AUTO.on || !P) return;
+  if (B) return; // 战斗中由自动战斗接管，下一拍再来
+  // 伤势过半：先投宿客栈
+  if (P.hp < P.hpMax * .55) {
+    const cost = 4 * P.lv + 6;
+    if (P.silver >= cost) rest();
+    else if (P.hp < P.hpMax * .4) return stopAuto('气血不济，又无盘缠歇脚——自动历练停止。');
+  }
+  if (P.hp < P.hpMax * .25 || P.mp < 10) return stopAuto('气血内力不济，自动历练停止。');
+  explore();
+}
+function stopAuto(msg) {
+  if (!AUTO.on) return;
+  clearInterval(AUTO.timer);
+  AUTO.timer = null;
+  AUTO.on = false;
+  if (msg) { log(msg, 'sys'); toast(msg); }
+  if (P) renderHome();
 }
 
 // ---------- 头目挑战 ----------
@@ -191,10 +238,11 @@ function restoreSave(d) {
   P.comps = P.comps || []; P.compActive = P.compActive || [];
   P.titles = P.titles || ['newbie'];
   if (!P.titles.includes('newbie')) P.titles.push('newbie');
-  // 旧档迁移：补齐武学运功槽
+  // 旧档迁移：补齐武学运功槽与新增装束槽
   if (!P.rtSkill && !P.rtSkill2 && !P.inSkill && !P.agSkill) {
     P.skills.slice().forEach(id => autoEquip(id));
   }
+  EQUIP_SLOTS.forEach(s => { if (P[s] === undefined) P[s] = null; });
   curMap = flags.loc || 'niujiacun';
   if (!MAPS.find(m => m.id === curMap)) curMap = 'niujiacun';
   Sfx.muted = !!flags.muted;
@@ -232,6 +280,7 @@ function init() {
   }
 
   $('#btn-explore').addEventListener('click', explore);
+  $('#btn-auto').addEventListener('click', toggleAuto);
   $('#btn-travel').addEventListener('click', openMap);
   $('#btn-companions').addEventListener('click', openCompanions);
   $('#btn-bounty').addEventListener('click', openBounty);
