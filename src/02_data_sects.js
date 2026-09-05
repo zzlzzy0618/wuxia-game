@@ -1,16 +1,22 @@
-/* ============ 数据：十大门派 & 武学体系 ============ */
+/* ============ 数据：十大门派 & 武学体系（套路 / 内功 / 轻功 三系） ============ */
 
-// 武学阶级模板：15 阶，决定等级/威力/耗蓝
+// 武学阶级模板：15 阶，决定等级 / 基础威力 / 基础耗蓝
+// 每门武学含五式招法：一式入门、二式进阶、三式精要、四式奥义、五式大成绝招
+// （招式威力 = 阶级威力 × 招式系数，见 05_gen.js）
 const SKILL_TIERS = [
-  { lv: 1,  mult: 1.30, mp: 5 },  { lv: 3,  mult: 1.50, mp: 9 },
-  { lv: 5,  mult: 1.75, mp: 14 }, { lv: 7,  mult: 2.00, mp: 19 },
-  { lv: 9,  mult: 2.25, mp: 24 }, { lv: 11, mult: 2.55, mp: 30 },
-  { lv: 13, mult: 2.85, mp: 36 }, { lv: 15, mult: 3.15, mp: 42 },
-  { lv: 17, mult: 3.50, mp: 49 }, { lv: 19, mult: 3.85, mp: 56 },
-  { lv: 21, mult: 4.20, mp: 63 }, { lv: 23, mult: 4.60, mp: 70 },
-  { lv: 25, mult: 5.00, mp: 78 }, { lv: 27, mult: 5.50, mp: 86 },
-  { lv: 29, mult: 6.20, mp: 95 }
+  { lv: 1,  mult: 1.15, mp: 5 },  { lv: 3,  mult: 1.30, mp: 8 },
+  { lv: 5,  mult: 1.45, mp: 12 }, { lv: 7,  mult: 1.60, mp: 16 },
+  { lv: 9,  mult: 1.75, mp: 20 }, { lv: 11, mult: 1.95, mp: 25 },
+  { lv: 13, mult: 2.15, mp: 30 }, { lv: 15, mult: 2.35, mp: 35 },
+  { lv: 17, mult: 2.55, mp: 40 }, { lv: 19, mult: 2.80, mp: 45 },
+  { lv: 21, mult: 3.05, mp: 51 }, { lv: 23, mult: 3.30, mp: 57 },
+  { lv: 25, mult: 3.55, mp: 63 }, { lv: 27, mult: 3.85, mp: 70 },
+  { lv: 29, mult: 4.20, mp: 78 }
 ];
+
+// 门派 15 门武学的槽位分类序列：8 套路(rt) + 4 内功(in) + 3 轻功(ag)
+// 交错排布，保证早中晚期皆有新武学可学
+const SECT_SKILL_CATS = ['rt', 'rt', 'in', 'rt', 'ag', 'rt', 'rt', 'in', 'rt', 'ag', 'rt', 'in', 'rt', 'in', 'ag'];
 
 const SECTS = {
   shaolin: {
@@ -19,23 +25,44 @@ const SECTS = {
     base: { hp: 135, mp: 50, atk: 14, def: 9, spd: 6, crt: 5 },
     grow: { hp: 24, mp: 8, atk: 3.5, def: 2.6, spd: .8, crt: .8 },
     skills: [
-      ['少林长拳'], ['罗汉拳'], ['韦陀掌'], ['拈花指', { stun: .18 }],
-      ['伏虎拳'], ['大力金刚掌', { stun: .22 }], ['龙爪手'], ['如影随形腿'],
-      ['袈裟伏魔功'], ['易筋经', { heal: .25, healMp: .15, atkBuff: 2 }], ['洗髓经', { heal: .40, healMp: .2 }],
-      ['金刚不坏体', { defBuff: 3 }], ['千手如来掌', { hits: 3 }], ['如来千叶手', { hits: 2, stun: .2 }],
-      ['如来神掌', { mustCrit: true }]
+      /* s0 rt */ ['少林长拳'],
+      /* s1 rt */ ['罗汉拳', { critBonus: 4 }],
+      /* s2 in */ ['坐禅心法'],
+      /* s3 rt */ ['韦陀掌', { stun: .12 }],
+      /* s4 ag */ ['轻身术'],
+      /* s5 rt */ ['拈花指', { stun: .18 }],
+      /* s6 rt */ ['伏虎拳', { hits: 2 }],
+      /* s7 in */ ['袈裟伏魔功'],
+      /* s8 rt */ ['大力金刚掌', { stun: .22 }],
+      /* s9 ag */ ['飞絮身法'],
+      /* s10 rt */ ['千手如来掌', { hits: 3 }],
+      /* s11 in */ ['金刚不坏体'],
+      /* s12 rt */ ['如来神掌', { mustCrit: 1 }],
+      /* s13 in */ ['易筋经'],
+      /* s14 ag */ ['一苇渡江']
     ]
   },
   wudang: {
     name: '武当派', tag: '内功 · 绵长', passive: { id: 'regen', text: '道家真气 · 每回合额外恢复内力' },
     desc: '以柔克刚，以慢打快。真气悠长，守中带攻，越战越强。',
-    base: { hp: 115, mp: 72, atk: 13, def: 7, spd: 8, crt: 6 },
-    grow: { hp: 18, mp: 15, atk: 3.1, def: 2.0, spd: 1.0, crt: 1.0 },
+    base: { hp: 124, mp: 72, atk: 13, def: 7, spd: 8, crt: 6 },
+    grow: { hp: 20, mp: 15, atk: 3.1, def: 2.15, spd: 1.0, crt: 1.0 },
     skills: [
-      ['武当长拳'], ['绵掌'], ['武当剑法'], ['神门十三剑'],
-      ['绕指柔剑'], ['梯云纵', { defBuff: 2 }], ['太极剑', { defBuff: 2 }], ['八卦游龙掌'],
-      ['玄虚刀法'], ['真武七截阵', { hits: 2 }], ['无极玄功拳'], ['纯阳无极功', { mpDrain: 30 }],
-      ['倚天屠龙功', { hits: 2 }], ['太极神功', { heal: .35, healMp: .3 }], ['真武剑诀', { ignoreDef: true }]
+      /* s0 rt */ ['武当长拳'],
+      /* s1 rt */ ['绵掌'],
+      /* s2 in */ ['纯阳功'],
+      /* s3 rt */ ['武当剑法', { critBonus: 3 }],
+      /* s4 ag */ ['蹑云踪'],
+      /* s5 rt */ ['神门十三剑', { hits: 2 }],
+      /* s6 rt */ ['绕指柔剑', { critBonus: 6 }],
+      /* s7 in */ ['无极玄功'],
+      /* s8 rt */ ['太极剑', { defBuff: 2 }],
+      /* s9 ag */ ['神行无踪'],
+      /* s10 rt */ ['玄虚刀法', { dot: .1 }],
+      /* s11 in */ ['倚天屠龙功'],
+      /* s12 rt */ ['真武剑诀', { ignoreDef: 1 }],
+      /* s13 in */ ['纯阳无极功'],
+      /* s14 ag */ ['梯云纵']
     ]
   },
   gumu: {
@@ -44,10 +71,21 @@ const SECTS = {
     base: { hp: 108, mp: 60, atk: 15, def: 5, spd: 12, crt: 10 },
     grow: { hp: 18, mp: 12, atk: 3.8, def: 1.7, spd: 1.8, crt: 1.6 },
     skills: [
-      ['美女拳法', { critBonus: 6 }], ['天罗地网势'], ['玉女剑法'], ['银索金铃', { hits: 2 }],
-      ['捕雀功', { critBonus: 8 }], ['玉蜂针', { dot: .12 }], ['冰魄银针', { dot: .18 }], ['寒玉床心法', { heal: .3 }],
-      ['拂尘功'], ['玉女心经', { atkBuff: 2 }], ['玉女素心剑', { hits: 2, critBonus: 6 }], ['空谷幽兰', { critBonus: 10, stun: .15 }],
-      ['林朝英剑法'], ['黯然销魂掌', { critBonus: 12 }], ['太阴归元剑', { mustCrit: true }]
+      /* s0 rt */ ['美女拳法', { critBonus: 6 }],
+      /* s1 rt */ ['天罗地网势', { hits: 2 }],
+      /* s2 in */ ['寒玉心法'],
+      /* s3 rt */ ['玉女剑法', { critBonus: 4 }],
+      /* s4 ag */ ['捕雀功'],
+      /* s5 rt */ ['银索金铃', { hits: 2 }],
+      /* s6 rt */ ['玉蜂针', { dot: .12 }],
+      /* s7 in */ ['玉女心经'],
+      /* s8 rt */ ['冰魄银针', { dot: .18 }],
+      /* s9 ag */ ['灵狐身法'],
+      /* s10 rt */ ['玉女素心剑', { hits: 2, critBonus: 6 }],
+      /* s11 in */ ['玄阴真气'],
+      /* s12 rt */ ['黯然销魂掌', { critBonus: 12 }],
+      /* s13 in */ ['太阴归元功'],
+      /* s14 ag */ ['凌虚踏风']
     ]
   },
   feidao: {
@@ -56,11 +94,21 @@ const SECTS = {
     base: { hp: 95, mp: 55, atk: 19, def: 4, spd: 10, crt: 13 },
     grow: { hp: 15, mp: 10, atk: 4.6, def: 1.3, spd: 1.2, crt: 2.2 },
     skills: [
-      ['飞蝗石'], ['袖箭'], ['飞刀术'], ['追魂夺命剑'],
-      ['燕子三抄水', { critBonus: 8 }], ['流云飞袖'], ['银针渡穴', { stun: .2 }], ['漫天花雨', { hits: 3 }],
-      ['流星赶月', { hits: 2 }], ['无影快剑', { critBonus: 12 }], ['例不虚发', { mustHit: true, critBonus: 10 }],
-      ['夺命飞刀', { mustCrit: true }], ['一剑封喉', { hits: 2, mustHit: true }], ['剑心通明', { critBonus: 15, ignoreDef: true }],
-      ['小李飞刀', { mustHit: true, mustCrit: true, ignoreDef: true }]
+      /* s0 rt */ ['飞蝗石'],
+      /* s1 rt */ ['袖箭', { critBonus: 3 }],
+      /* s2 in */ ['吐纳静心诀'],
+      /* s3 rt */ ['飞刀术', { critBonus: 6 }],
+      /* s4 ag */ ['疾风身法'],
+      /* s5 rt */ ['追魂夺命剑', { hits: 2 }],
+      /* s6 rt */ ['流云飞袖', { hits: 2 }],
+      /* s7 in */ ['凝神诀'],
+      /* s8 rt */ ['漫天花雨', { hits: 3 }],
+      /* s9 ag */ ['追星逐月'],
+      /* s10 rt */ ['流星赶月', { hits: 2, critBonus: 8 }],
+      /* s11 in */ ['听风辨器'],
+      /* s12 rt */ ['小李飞刀', { mustHit: 1, mustCrit: 1 }],
+      /* s13 in */ ['剑心通明'],
+      /* s14 ag */ ['燕子三抄水', { mustHit: 1 }]
     ]
   },
   yihua: {
@@ -69,10 +117,21 @@ const SECTS = {
     base: { hp: 110, mp: 66, atk: 15, def: 6, spd: 9, crt: 8 },
     grow: { hp: 17, mp: 13, atk: 3.6, def: 1.7, spd: 1.3, crt: 1.3 },
     skills: [
-      ['移花诀'], ['落花掌'], ['移形换位'], ['飞花摘叶', { hits: 2 }],
-      ['碎玉掌'], ['踏雪无痕', { critBonus: 8 }], ['玉碎昆冈', { hpCost: .08 }], ['移花接玉', { lifesteal: .35 }],
-      ['镜花水月', { dot: .15 }], ['明玉诀', { mpDrain: 28 }], ['焚玉掌', { hpCost: .1 }], ['借花献佛', { lifesteal: .45 }],
-      ['明玉九转', { heal: .3, lifesteal: .3 }], ['明玉功', { lifesteal: .5 }], ['嫁衣神功', { hpCost: .12, mustCrit: true }]
+      /* s0 rt */ ['移花诀'],
+      /* s1 rt */ ['落花掌'],
+      /* s2 in */ ['移花心法'],
+      /* s3 rt */ ['飞花摘叶', { hits: 2 }],
+      /* s4 ag */ ['落英身法'],
+      /* s5 rt */ ['碎玉掌', { critBonus: 5 }],
+      /* s6 rt */ ['玉碎昆冈', { hpCost: .06 }],
+      /* s7 in */ ['明玉诀', { drain: 1 }],
+      /* s8 rt */ ['焚玉掌', { dot: .12, hpCost: .08 }],
+      /* s9 ag */ ['惊鸿照影'],
+      /* s10 rt */ ['移花接玉', { lifesteal: .3 }],
+      /* s11 in */ ['嫁衣神功'],
+      /* s12 rt */ ['明玉掌', { lifesteal: .4 }],
+      /* s13 in */ ['明玉功', { drain: 1 }],
+      /* s14 ag */ ['踏雪无痕']
     ]
   },
   gaibang: {
@@ -81,10 +140,21 @@ const SECTS = {
     base: { hp: 125, mp: 58, atk: 16, def: 7, spd: 7, crt: 7 },
     grow: { hp: 21, mp: 10, atk: 3.9, def: 2.1, spd: 1.0, crt: 1.1 },
     skills: [
-      ['太祖长拳'], ['太祖棒法'], ['疯魔杖法'], ['逍遥游'],
-      ['铁帚腿法'], ['莲花掌'], ['蟠龙棍法'], ['亢龙有悔'],
-      ['飞龙在天'], ['龙战于野', { hits: 2 }], ['潜龙勿用', { stun: .25 }], ['密云不雨', { defBuff: 2 }],
-      ['或跃在渊', { hits: 2 }], ['打狗棒法', { hits: 2, stun: .2 }], ['降龙十八掌', { mustCrit: true }]
+      /* s0 rt */ ['太祖长拳'],
+      /* s1 rt */ ['莲花掌'],
+      /* s2 in */ ['丐帮心法'],
+      /* s3 rt */ ['疯魔杖法', { stun: .12 }],
+      /* s4 ag */ ['铁帚腿法'],
+      /* s5 rt */ ['逍遥游', { critBonus: 5 }],
+      /* s6 rt */ ['蟠龙棍法', { hits: 2 }],
+      /* s7 in */ ['醉侠心法'],
+      /* s8 rt */ ['龙战于野', { hits: 2 }],
+      /* s9 ag */ ['醉仙步'],
+      /* s10 rt */ ['潜龙勿用', { stun: .25 }],
+      /* s11 in */ ['混元一气功'],
+      /* s12 rt */ ['打狗棒法', { hits: 2, stun: .18 }],
+      /* s13 in */ ['潜龙诀'],
+      /* s14 ag */ ['狂风扫叶腿']
     ]
   },
   taohua: {
@@ -93,10 +163,21 @@ const SECTS = {
     base: { hp: 100, mp: 64, atk: 14, def: 6, spd: 11, crt: 9 },
     grow: { hp: 16, mp: 13, atk: 3.4, def: 1.6, spd: 1.6, crt: 1.4 },
     skills: [
-      ['碧波掌法'], ['扫叶腿'], ['落英神剑掌', { hits: 2 }], ['兰花拂穴手', { stun: .2 }],
-      ['玉箫剑法'], ['碧海潮生曲', { dot: .14 }], ['弹指神通', { critBonus: 10 }], ['落英剑法', { hits: 3 }],
-      ['奇门五转', { atkBuff: 2 }], ['五行轮转', { defBuff: 2 }], ['踏罡步斗', { critBonus: 8, stun: .12 }], ['碧海生潮', { hits: 2, dot: .12 }],
-      ['弹指惊天', { mustHit: true, critBonus: 8 }], ['玉箫剑气', { ignoreDef: true }], ['落英神剑', { mustCrit: true, hits: 2 }]
+      /* s0 rt */ ['碧波掌法'],
+      /* s1 rt */ ['玉箫剑法', { critBonus: 4 }],
+      /* s2 in */ ['桃源内息'],
+      /* s3 rt */ ['落英神剑掌', { hits: 2 }],
+      /* s4 ag */ ['落花身法'],
+      /* s5 rt */ ['兰花拂穴手', { stun: .18 }],
+      /* s6 rt */ ['落英剑法', { hits: 3 }],
+      /* s7 in */ ['五行轮转'],
+      /* s8 rt */ ['弹指神通', { critBonus: 10 }],
+      /* s9 ag */ ['云步仙踪'],
+      /* s10 rt */ ['碧海生潮', { hits: 2, dot: .1 }],
+      /* s11 in */ ['奇门心法'],
+      /* s12 rt */ ['弹指惊天', { mustHit: 1 }],
+      /* s13 in */ ['碧海潮生曲'],
+      /* s14 ag */ ['踏罡步斗']
     ]
   },
   lingjiu: {
@@ -105,10 +186,21 @@ const SECTS = {
     base: { hp: 110, mp: 70, atk: 15, def: 6, spd: 9, crt: 8 },
     grow: { hp: 18, mp: 14, atk: 3.5, def: 1.7, spd: 1.2, crt: 1.2 },
     skills: [
-      ['灵鹫掌法'], ['雪影掌'], ['折梅手'], ['天山六阳掌'],
-      ['寒冰绵掌', { dot: .12 }], ['白虹掌力', { critBonus: 8 }], ['传音搜魂', { stun: .2 }], ['小无相功', { mpDrain: 25 }],
-      ['天山折梅手', { hits: 2 }], ['冰魄寒光', { hits: 2, dot: .1 }], ['六阳融雪', { heal: .35 }], ['生死符', { dot: .22, mustHit: true }],
-      ['冰封千里', { stun: .3 }], ['八荒六合', { atkBuff: 2, lifesteal: .3 }], ['九天摘星手', { mustCrit: true }]
+      /* s0 rt */ ['灵鹫掌法'],
+      /* s1 rt */ ['雪影掌', { critBonus: 4 }],
+      /* s2 in */ ['天池真气'],
+      /* s3 rt */ ['折梅手'],
+      /* s4 ag */ ['雪地飞鸿'],
+      /* s5 rt */ ['天山六阳掌', { critBonus: 6 }],
+      /* s6 rt */ ['寒冰绵掌', { dot: .12 }],
+      /* s7 in */ ['六阳融雪'],
+      /* s8 rt */ ['白虹掌力', { critBonus: 8 }],
+      /* s9 ag */ ['缥缈身法'],
+      /* s10 rt */ ['天山折梅手', { hits: 2 }],
+      /* s11 in */ ['小无相功'],
+      /* s12 rt */ ['生死符', { dot: .22, mustHit: 1 }],
+      /* s13 in */ ['八荒六合唯我独尊功'],
+      /* s14 ag */ ['月影穿云']
     ]
   },
   duan: {
@@ -117,11 +209,21 @@ const SECTS = {
     base: { hp: 120, mp: 62, atk: 15, def: 7, spd: 8, crt: 7 },
     grow: { hp: 20, mp: 12, atk: 3.4, def: 2.2, spd: 1.0, crt: 1.0 },
     skills: [
-      ['段家剑法'], ['天南掌法'], ['一阳指 · 三品'], ['一阳指 · 二品', { critBonus: 6 }],
-      ['枯荣禅功', { heal: .3 }], ['六脉神剑 · 少商剑'], ['六脉神剑 · 商阳剑'], ['六脉神剑 · 中冲剑', { hits: 2 }],
-      ['六脉神剑 · 关冲剑', { critBonus: 8 }], ['六脉神剑 · 少冲剑', { hits: 2 }], ['六脉神剑 · 少泽剑', { stun: .2 }],
-      ['六剑齐发', { hits: 3 }], ['剑气长虹', { ignoreDef: true }], ['剑气纵横', { hits: 2, mustHit: true }],
-      ['万剑归宗', { mustCrit: true }]
+      /* s0 rt */ ['段家剑法'],
+      /* s1 rt */ ['天南掌法'],
+      /* s2 in */ ['段氏罡气'],
+      /* s3 rt */ ['一阳指', { critBonus: 6 }],
+      /* s4 ag */ ['天南步法'],
+      /* s5 rt */ ['六脉神剑 · 少商剑', { critBonus: 8 }],
+      /* s6 rt */ ['六脉神剑 · 中冲剑', { hits: 2 }],
+      /* s7 in */ ['一阳玄功'],
+      /* s8 rt */ ['剑气纵横', { hits: 2 }],
+      /* s9 ag */ ['飞凤回翔'],
+      /* s10 rt */ ['六脉神剑 · 少泽剑', { stun: .2 }],
+      /* s11 in */ ['枯荣禅功'],
+      /* s12 rt */ ['六剑齐发', { hits: 3 }],
+      /* s13 in */ ['六脉心诀'],
+      /* s14 ag */ ['凌空虚度']
     ]
   },
   baiyun: {
@@ -130,55 +232,69 @@ const SECTS = {
     base: { hp: 95, mp: 58, atk: 17, def: 5, spd: 11, crt: 11 },
     grow: { hp: 15, mp: 11, atk: 4.2, def: 1.4, spd: 1.5, crt: 1.8 },
     skills: [
-      ['白云剑法'], ['流云剑法'], ['浮云剑式'], ['拂柳剑法'],
-      ['停云剑式', { critBonus: 8 }], ['望月式'], ['追星赶月', { hits: 2 }], ['云卷云舒', { dot: .13 }],
-      ['青冥剑气'], ['断云式', { critBonus: 12 }], ['孤城落日', { atkBuff: 2 }], ['清风拂柳', { stun: .22 }],
-      ['一剑西来', { mustHit: true }], ['剑破长空', { hits: 2 }], ['天外飞仙', { mustHit: true, mustCrit: true, ignoreDef: true }]
+      /* s0 rt */ ['白云剑法'],
+      /* s1 rt */ ['浮云剑式', { critBonus: 4 }],
+      /* s2 in */ ['明月真气'],
+      /* s3 rt */ ['拂柳剑法', { critBonus: 6 }],
+      /* s4 ag */ ['流云身法'],
+      /* s5 rt */ ['停云剑式', { critBonus: 8 }],
+      /* s6 rt */ ['追星赶月', { hits: 2 }],
+      /* s7 in */ ['御剑玄功'],
+      /* s8 rt */ ['青冥剑气', { critBonus: 10 }],
+      /* s9 ag */ ['踏月留香'],
+      /* s10 rt */ ['断云式', { critBonus: 12 }],
+      /* s11 in */ ['天外流云诀'],
+      /* s12 rt */ ['一剑西来', { mustHit: 1 }],
+      /* s13 in */ ['剑皇心诀'],
+      /* s14 ag */ ['天际流光']
     ]
   }
 };
 
-// 通用武学（秘籍习得，20 种）
+// 通用武学（秘籍习得，20 种：12 套路 + 5 内功 + 3 轻功）
 const UNIVERSAL_SKILLS = [
-  ['基础剑法', { mult: .9 }], ['基础刀法', { mult: .9 }], ['基础掌法', { mult: .9 }],
-  ['混元功', { mpDrain: 15 }], ['吐纳术', { heal: .2 }], ['铁砂掌', { stun: .12 }],
-  ['大伏虎拳', { mult: 1.1 }], ['金钟罩', { defBuff: 2 }], ['铁布衫', { defBuff: 3 }],
-  ['八段锦', { heal: .25, healMp: .15 }], ['五禽戏', { heal: .3 }], ['太祖棍法', { mult: 1.15 }],
-  ['燕青拳', { hits: 2 }], ['八极拳', { stun: .18 }], ['形意拳', { critBonus: 8 }],
-  ['八卦掌', { hits: 2 }], ['通背拳', { critBonus: 6 }], ['劈挂掌', { mult: 1.2 }],
-  ['佛山无影脚', { hits: 3 }], ['醉拳', { atkBuff: 2, critBonus: 10 }]
+  ['基础剑法', { cat: 'rt', mult: .9 }], ['基础刀法', { cat: 'rt', mult: .9 }], ['基础掌法', { cat: 'rt', mult: .9 }],
+  ['混元功', { cat: 'in' }], ['吐纳术', { cat: 'in' }], ['铁砂掌', { cat: 'rt', stun: .12 }],
+  ['大伏虎拳', { cat: 'rt', mult: 1.1 }], ['金钟罩', { cat: 'in' }], ['铁布衫', { cat: 'in' }],
+  ['八段锦', { cat: 'in' }], ['太祖棍法', { cat: 'rt', mult: 1.15 }],
+  ['燕青拳', { cat: 'rt', hits: 2 }], ['八极拳', { cat: 'rt', stun: .18 }], ['形意拳', { cat: 'rt', critBonus: 8 }],
+  ['八卦掌', { cat: 'rt', hits: 2 }], ['劈挂掌', { cat: 'rt', mult: 1.2 }],
+  ['佛山无影脚', { cat: 'rt', hits: 3 }],
+  ['壁虎游墙', { cat: 'ag' }], ['草上飞', { cat: 'ag' }], ['踏浪行', { cat: 'ag' }]
 ];
 
-// 隐世武学（奇遇/头目习得，30 种）
+// 隐世武学（奇遇/头目习得，32 种：19 套路 + 11 内功 + 2 轻功）
 const HIDDEN_SKILLS = {
-  jiuyang:      ['九阳神功', { heal: .45, healMp: .35, atkBuff: 2 }],
-  jiuyin:       ['九阴真经', { hits: 2, critBonus: 10 }],
-  dugu:         ['独孤九剑', { ignoreDef: true, mustCrit: true }],
-  beiming:      ['北冥神功', { mpDrain: 45, mult: 1.2 }],
-  qiankun:      ['乾坤大挪移', { lifesteal: .5 }],
-  taixuan:      ['太玄经', { hits: 3 }],
-  shenzhao:     ['神照经', { heal: .6, healMp: .5 }],
-  longxiang:    ['龙象般若功', { mult: 1.4, stun: .2 }],
-  xuantiejian:  ['玄铁剑法', { hpCost: .08, mult: 1.3 }],
-  huoyandao:    ['火焰刀', { dot: .25 }],
-  hamagong:     ['蛤蟆功', { stun: .3, mult: 1.15 }],
-  kongming:     ['空明拳', { hits: 2, mustHit: true }],
-  zuoyouhubo:   ['左右互搏', { hits: 2, mult: 1.1 }],
-  xiantian:     ['先天功', { atkBuff: 3, defBuff: 2 }],
-  tiancan:      ['天蚕神功', { heal: .5, defBuff: 2 }],
-  xuedaodao:    ['血刀刀法', { lifesteal: .4, mult: 1.15 }],
-  fanliangyi:   ['反两仪刀法', { hits: 2, critBonus: 6 }],
-  jinshejian:   ['金蛇剑法', { critBonus: 15 }],
-  bixiejianfa:  ['辟邪剑法', { mustCrit: true, mult: 1.15 }],
-  taijiquan:    ['太极拳', { defBuff: 2, heal: .25 }],
-  huagong:      ['化功大法', { mpDrain: 40 }],
-  xixing:       ['吸星大法', { lifesteal: .35, mpDrain: 25 }],
-  xuanming:     ['玄冥神掌', { dot: .28, stun: .15 }],
-  qishang:      ['七伤拳', { hpCost: .1, mult: 1.35 }],
-  duoming15:    ['夺命十五剑', { mustCrit: true, ignoreDef: true }],
-  lingxiyz:     ['灵犀一指', { critBonus: 20, stun: .18 }],
-  damoji:       ['达摩剑法', { hits: 2, mustHit: true }],
-  weituogun:    ['韦陀棍法', { stun: .22, mult: 1.1 }],
-  poyun:        ['破云掌', { hits: 2, mult: 1.2 }],
-  wanjianjue:   ['万剑诀', { hits: 3, critBonus: 8 }]
+  jiuyang:      ['九阳神功', { cat: 'in' }],
+  jiuyin:       ['九阴真经', { cat: 'in' }],
+  dugu:         ['独孤九剑', { cat: 'rt', ignoreDef: 1, mustCrit: 1 }],
+  beiming:      ['北冥神功', { cat: 'in', drain: 1, mult: 1.2 }],
+  qiankun:      ['乾坤大挪移', { cat: 'in' }],
+  taixuan:      ['太玄经', { cat: 'in' }],
+  shenzhao:     ['神照经', { cat: 'in' }],
+  longxiang:    ['龙象般若功', { cat: 'in', mult: 1.4 }],
+  xuantiejian:  ['玄铁剑法', { cat: 'rt', hpCost: .08, mult: 1.3 }],
+  huoyandao:    ['火焰刀', { cat: 'rt', dot: .25 }],
+  hamagong:     ['蛤蟆功', { cat: 'rt', stun: .3, mult: 1.15 }],
+  kongming:     ['空明拳', { cat: 'rt', hits: 2, mustHit: 1 }],
+  zuoyouhubo:   ['左右互搏', { cat: 'rt', hits: 2, mult: 1.1 }],
+  xiantian:     ['先天功', { cat: 'in' }],
+  tiancan:      ['天蚕神功', { cat: 'in' }],
+  xuedaodao:    ['血刀刀法', { cat: 'rt', lifesteal: .4, mult: 1.15 }],
+  fanliangyi:   ['反两仪刀法', { cat: 'rt', hits: 2, critBonus: 6 }],
+  jinshejian:   ['金蛇剑法', { cat: 'rt', critBonus: 15 }],
+  bixiejianfa:  ['辟邪剑法', { cat: 'rt', mustCrit: 1, mult: 1.15 }],
+  taijiquan:    ['太极拳', { cat: 'rt', defBuff: 2 }],
+  huagong:      ['化功大法', { cat: 'in', drain: 1 }],
+  xixing:       ['吸星大法', { cat: 'in', drain: 1 }],
+  xuanming:     ['玄冥神掌', { cat: 'rt', dot: .28, stun: .15 }],
+  qishang:      ['七伤拳', { cat: 'rt', hpCost: .1, mult: 1.35 }],
+  duoming15:    ['夺命十五剑', { cat: 'rt', mustCrit: 1, ignoreDef: 1 }],
+  lingxiyz:     ['灵犀一指', { cat: 'rt', critBonus: 20, stun: .18 }],
+  damoji:       ['达摩剑法', { cat: 'rt', hits: 2, mustHit: 1 }],
+  weituogun:    ['韦陀棍法', { cat: 'rt', stun: .22, mult: 1.1 }],
+  poyun:        ['破云掌', { cat: 'rt', hits: 2, mult: 1.2 }],
+  wanjianjue:   ['万剑诀', { cat: 'rt', hits: 3, critBonus: 8 }],
+  lingbo:       ['凌波微步', { cat: 'ag', mustHit: 1 }],
+  shenxingbai:  ['神行百变', { cat: 'ag' }]
 };

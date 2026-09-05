@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>江湖录 · 武侠RPG v2</title>
+<title>江湖录 · 武侠RPG v2.1</title>
 <style>
   :root{
     --ink:#17171c; --ink2:#22222a;
@@ -121,6 +121,22 @@
   .loc-desc{color:var(--text-dim);margin-top:6px;line-height:1.8;font-size:14px}
   .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;margin-top:14px}
   .actions .btn{padding:8px 4px;font-size:14px}
+  .actions .grp{grid-column:1/-1;font-size:11.5px;letter-spacing:4px;color:var(--text-dim);border-bottom:1px dashed #00000022;padding-bottom:3px;margin-top:2px}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px;margin:8px 0 4px}
+  .stat-cell{background:rgba(0,0,0,.05);border:1px solid var(--paper-dark);border-radius:8px;padding:8px 10px;text-align:center;line-height:1.5}
+  .stat-cell span{display:block;font-size:11.5px;letter-spacing:3px;color:var(--text-dim)}
+  .stat-cell b{display:block;font-size:19px;letter-spacing:1px;margin-top:2px}
+  .stat-cell b.small{font-size:14.5px;line-height:1.5}
+  .stat-cell em{display:block;font-style:normal;font-size:11px;color:var(--jade);letter-spacing:1px;margin-top:2px}
+  .fx-line{font-size:13.5px;color:var(--jade);letter-spacing:1px}
+  .move-row{display:flex;align-items:baseline;gap:7px;padding:3px 0;font-size:13px;border-bottom:1px dashed #00000012;flex-wrap:wrap}
+  .move-row:last-child{border-bottom:none}
+  .move-row.locked{opacity:.48}
+  .move-row .mno{font-size:11px;color:var(--gold-dim);letter-spacing:1px;white-space:nowrap}
+  .move-row .mfx{color:var(--text-dim);font-size:12.5px}
+  .mtag{font-size:10.5px;padding:0 7px;border-radius:99px;letter-spacing:1px;border:1px solid}
+  .mtag.act{color:var(--red);border-color:var(--red)}
+  .mtag.pas{color:var(--jade);border-color:var(--jade)}
   .quest-box{margin-top:14px;border-left:4px solid var(--red);padding:8px 12px;background:rgba(166,58,46,.07);border-radius:0 8px 8px 0;font-size:14px;line-height:1.8}
   .comp-strip{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
   .comp-chip{
@@ -215,7 +231,7 @@
       <button class="btn" id="btn-continue" style="display:none">重出江湖</button>
       <button class="btn" id="btn-about">关于此书</button>
     </div>
-    <div class="title-foot">致敬金庸 · 古龙 武侠世界 · 豪华版<br>十大门派 · 二百武学 · 三百珍品 · 五十五处江湖 · 伙伴同行<br>悬赏 · 锻造 · 比武大会 · 称号 · 隐世奇遇<br>同人练手之作 · 纯前端单文件 · 无需安装</div>
+    <div class="title-foot">致敬金庸 · 古龙 武侠世界 · 豪华版<br>十大门派 · 二百武学三系千招 · 三百珍品 · 五十五处江湖 · 伙伴同行<br>悬赏 · 锻造 · 比武大会 · 称号 · 隐世奇遇<br>同人练手之作 · 纯前端单文件 · 无需安装</div>
   </div>
 
   <div id="screen-create" class="screen">
@@ -249,19 +265,24 @@
       <div class="loc-head"><h2 id="loc-name"></h2><span class="sub" id="loc-sub"></span></div>
       <div class="loc-desc" id="loc-desc"></div>
       <div class="actions">
+        <div class="grp">— 历 练 —</div>
         <button class="btn btn-primary" id="btn-explore">探 索</button>
         <button class="btn btn-primary" id="btn-boss" style="display:none"></button>
-        <button class="btn" id="btn-travel">江湖舆图</button>
+        <div class="grp">— 人 物 —</div>
+        <button class="btn" id="btn-skills">武 学</button>
+        <button class="btn" id="btn-stats">属 性</button>
+        <button class="btn" id="btn-bag">行 囊</button>
         <button class="btn" id="btn-companions">伙 伴</button>
+        <div class="grp">— 江 湖 —</div>
+        <button class="btn" id="btn-travel">江湖舆图</button>
         <button class="btn btn-gold" id="btn-bounty">悬赏榜</button>
-        <button class="btn btn-gold" id="btn-forge">锻 造</button>
         <button class="btn btn-jade" id="btn-tournament">比武大会</button>
+        <button class="btn btn-gold" id="btn-forge">锻 造</button>
         <button class="btn" id="btn-titles">称 号</button>
+        <div class="grp">— 休 整 —</div>
+        <button class="btn" id="btn-shop">飞鸽购药</button>
         <button class="btn" id="btn-rest">客栈歇息</button>
         <button class="btn" id="btn-train">打坐修炼</button>
-        <button class="btn" id="btn-shop">飞鸽购药</button>
-        <button class="btn" id="btn-bag">行 囊</button>
-        <button class="btn" id="btn-skills">武 学</button>
       </div>
       <div class="comp-strip" id="comp-strip"></div>
       <div class="quest-box" id="quest-box"></div>
@@ -334,19 +355,25 @@ const Sfx = {
   forge() { this.tone(180, .1, 'sawtooth', .18); this.tone(1200, .06, 'square', .1, .1); this.tone(180, .12, 'sawtooth', .16, .18); },
   fail() { this.tone(200, .2, 'sine', .12, 0, -80); }
 };
-/* ============ 数据：十大门派 & 武学体系 ============ */
+/* ============ 数据：十大门派 & 武学体系（套路 / 内功 / 轻功 三系） ============ */
 
-// 武学阶级模板：15 阶，决定等级/威力/耗蓝
+// 武学阶级模板：15 阶，决定等级 / 基础威力 / 基础耗蓝
+// 每门武学含五式招法：一式入门、二式进阶、三式精要、四式奥义、五式大成绝招
+// （招式威力 = 阶级威力 × 招式系数，见 05_gen.js）
 const SKILL_TIERS = [
-  { lv: 1,  mult: 1.30, mp: 5 },  { lv: 3,  mult: 1.50, mp: 9 },
-  { lv: 5,  mult: 1.75, mp: 14 }, { lv: 7,  mult: 2.00, mp: 19 },
-  { lv: 9,  mult: 2.25, mp: 24 }, { lv: 11, mult: 2.55, mp: 30 },
-  { lv: 13, mult: 2.85, mp: 36 }, { lv: 15, mult: 3.15, mp: 42 },
-  { lv: 17, mult: 3.50, mp: 49 }, { lv: 19, mult: 3.85, mp: 56 },
-  { lv: 21, mult: 4.20, mp: 63 }, { lv: 23, mult: 4.60, mp: 70 },
-  { lv: 25, mult: 5.00, mp: 78 }, { lv: 27, mult: 5.50, mp: 86 },
-  { lv: 29, mult: 6.20, mp: 95 }
+  { lv: 1,  mult: 1.15, mp: 5 },  { lv: 3,  mult: 1.30, mp: 8 },
+  { lv: 5,  mult: 1.45, mp: 12 }, { lv: 7,  mult: 1.60, mp: 16 },
+  { lv: 9,  mult: 1.75, mp: 20 }, { lv: 11, mult: 1.95, mp: 25 },
+  { lv: 13, mult: 2.15, mp: 30 }, { lv: 15, mult: 2.35, mp: 35 },
+  { lv: 17, mult: 2.55, mp: 40 }, { lv: 19, mult: 2.80, mp: 45 },
+  { lv: 21, mult: 3.05, mp: 51 }, { lv: 23, mult: 3.30, mp: 57 },
+  { lv: 25, mult: 3.55, mp: 63 }, { lv: 27, mult: 3.85, mp: 70 },
+  { lv: 29, mult: 4.20, mp: 78 }
 ];
+
+// 门派 15 门武学的槽位分类序列：8 套路(rt) + 4 内功(in) + 3 轻功(ag)
+// 交错排布，保证早中晚期皆有新武学可学
+const SECT_SKILL_CATS = ['rt', 'rt', 'in', 'rt', 'ag', 'rt', 'rt', 'in', 'rt', 'ag', 'rt', 'in', 'rt', 'in', 'ag'];
 
 const SECTS = {
   shaolin: {
@@ -355,23 +382,44 @@ const SECTS = {
     base: { hp: 135, mp: 50, atk: 14, def: 9, spd: 6, crt: 5 },
     grow: { hp: 24, mp: 8, atk: 3.5, def: 2.6, spd: .8, crt: .8 },
     skills: [
-      ['少林长拳'], ['罗汉拳'], ['韦陀掌'], ['拈花指', { stun: .18 }],
-      ['伏虎拳'], ['大力金刚掌', { stun: .22 }], ['龙爪手'], ['如影随形腿'],
-      ['袈裟伏魔功'], ['易筋经', { heal: .25, healMp: .15, atkBuff: 2 }], ['洗髓经', { heal: .40, healMp: .2 }],
-      ['金刚不坏体', { defBuff: 3 }], ['千手如来掌', { hits: 3 }], ['如来千叶手', { hits: 2, stun: .2 }],
-      ['如来神掌', { mustCrit: true }]
+      /* s0 rt */ ['少林长拳'],
+      /* s1 rt */ ['罗汉拳', { critBonus: 4 }],
+      /* s2 in */ ['坐禅心法'],
+      /* s3 rt */ ['韦陀掌', { stun: .12 }],
+      /* s4 ag */ ['轻身术'],
+      /* s5 rt */ ['拈花指', { stun: .18 }],
+      /* s6 rt */ ['伏虎拳', { hits: 2 }],
+      /* s7 in */ ['袈裟伏魔功'],
+      /* s8 rt */ ['大力金刚掌', { stun: .22 }],
+      /* s9 ag */ ['飞絮身法'],
+      /* s10 rt */ ['千手如来掌', { hits: 3 }],
+      /* s11 in */ ['金刚不坏体'],
+      /* s12 rt */ ['如来神掌', { mustCrit: 1 }],
+      /* s13 in */ ['易筋经'],
+      /* s14 ag */ ['一苇渡江']
     ]
   },
   wudang: {
     name: '武当派', tag: '内功 · 绵长', passive: { id: 'regen', text: '道家真气 · 每回合额外恢复内力' },
     desc: '以柔克刚，以慢打快。真气悠长，守中带攻，越战越强。',
-    base: { hp: 115, mp: 72, atk: 13, def: 7, spd: 8, crt: 6 },
-    grow: { hp: 18, mp: 15, atk: 3.1, def: 2.0, spd: 1.0, crt: 1.0 },
+    base: { hp: 124, mp: 72, atk: 13, def: 7, spd: 8, crt: 6 },
+    grow: { hp: 20, mp: 15, atk: 3.1, def: 2.15, spd: 1.0, crt: 1.0 },
     skills: [
-      ['武当长拳'], ['绵掌'], ['武当剑法'], ['神门十三剑'],
-      ['绕指柔剑'], ['梯云纵', { defBuff: 2 }], ['太极剑', { defBuff: 2 }], ['八卦游龙掌'],
-      ['玄虚刀法'], ['真武七截阵', { hits: 2 }], ['无极玄功拳'], ['纯阳无极功', { mpDrain: 30 }],
-      ['倚天屠龙功', { hits: 2 }], ['太极神功', { heal: .35, healMp: .3 }], ['真武剑诀', { ignoreDef: true }]
+      /* s0 rt */ ['武当长拳'],
+      /* s1 rt */ ['绵掌'],
+      /* s2 in */ ['纯阳功'],
+      /* s3 rt */ ['武当剑法', { critBonus: 3 }],
+      /* s4 ag */ ['蹑云踪'],
+      /* s5 rt */ ['神门十三剑', { hits: 2 }],
+      /* s6 rt */ ['绕指柔剑', { critBonus: 6 }],
+      /* s7 in */ ['无极玄功'],
+      /* s8 rt */ ['太极剑', { defBuff: 2 }],
+      /* s9 ag */ ['神行无踪'],
+      /* s10 rt */ ['玄虚刀法', { dot: .1 }],
+      /* s11 in */ ['倚天屠龙功'],
+      /* s12 rt */ ['真武剑诀', { ignoreDef: 1 }],
+      /* s13 in */ ['纯阳无极功'],
+      /* s14 ag */ ['梯云纵']
     ]
   },
   gumu: {
@@ -380,10 +428,21 @@ const SECTS = {
     base: { hp: 108, mp: 60, atk: 15, def: 5, spd: 12, crt: 10 },
     grow: { hp: 18, mp: 12, atk: 3.8, def: 1.7, spd: 1.8, crt: 1.6 },
     skills: [
-      ['美女拳法', { critBonus: 6 }], ['天罗地网势'], ['玉女剑法'], ['银索金铃', { hits: 2 }],
-      ['捕雀功', { critBonus: 8 }], ['玉蜂针', { dot: .12 }], ['冰魄银针', { dot: .18 }], ['寒玉床心法', { heal: .3 }],
-      ['拂尘功'], ['玉女心经', { atkBuff: 2 }], ['玉女素心剑', { hits: 2, critBonus: 6 }], ['空谷幽兰', { critBonus: 10, stun: .15 }],
-      ['林朝英剑法'], ['黯然销魂掌', { critBonus: 12 }], ['太阴归元剑', { mustCrit: true }]
+      /* s0 rt */ ['美女拳法', { critBonus: 6 }],
+      /* s1 rt */ ['天罗地网势', { hits: 2 }],
+      /* s2 in */ ['寒玉心法'],
+      /* s3 rt */ ['玉女剑法', { critBonus: 4 }],
+      /* s4 ag */ ['捕雀功'],
+      /* s5 rt */ ['银索金铃', { hits: 2 }],
+      /* s6 rt */ ['玉蜂针', { dot: .12 }],
+      /* s7 in */ ['玉女心经'],
+      /* s8 rt */ ['冰魄银针', { dot: .18 }],
+      /* s9 ag */ ['灵狐身法'],
+      /* s10 rt */ ['玉女素心剑', { hits: 2, critBonus: 6 }],
+      /* s11 in */ ['玄阴真气'],
+      /* s12 rt */ ['黯然销魂掌', { critBonus: 12 }],
+      /* s13 in */ ['太阴归元功'],
+      /* s14 ag */ ['凌虚踏风']
     ]
   },
   feidao: {
@@ -392,11 +451,21 @@ const SECTS = {
     base: { hp: 95, mp: 55, atk: 19, def: 4, spd: 10, crt: 13 },
     grow: { hp: 15, mp: 10, atk: 4.6, def: 1.3, spd: 1.2, crt: 2.2 },
     skills: [
-      ['飞蝗石'], ['袖箭'], ['飞刀术'], ['追魂夺命剑'],
-      ['燕子三抄水', { critBonus: 8 }], ['流云飞袖'], ['银针渡穴', { stun: .2 }], ['漫天花雨', { hits: 3 }],
-      ['流星赶月', { hits: 2 }], ['无影快剑', { critBonus: 12 }], ['例不虚发', { mustHit: true, critBonus: 10 }],
-      ['夺命飞刀', { mustCrit: true }], ['一剑封喉', { hits: 2, mustHit: true }], ['剑心通明', { critBonus: 15, ignoreDef: true }],
-      ['小李飞刀', { mustHit: true, mustCrit: true, ignoreDef: true }]
+      /* s0 rt */ ['飞蝗石'],
+      /* s1 rt */ ['袖箭', { critBonus: 3 }],
+      /* s2 in */ ['吐纳静心诀'],
+      /* s3 rt */ ['飞刀术', { critBonus: 6 }],
+      /* s4 ag */ ['疾风身法'],
+      /* s5 rt */ ['追魂夺命剑', { hits: 2 }],
+      /* s6 rt */ ['流云飞袖', { hits: 2 }],
+      /* s7 in */ ['凝神诀'],
+      /* s8 rt */ ['漫天花雨', { hits: 3 }],
+      /* s9 ag */ ['追星逐月'],
+      /* s10 rt */ ['流星赶月', { hits: 2, critBonus: 8 }],
+      /* s11 in */ ['听风辨器'],
+      /* s12 rt */ ['小李飞刀', { mustHit: 1, mustCrit: 1 }],
+      /* s13 in */ ['剑心通明'],
+      /* s14 ag */ ['燕子三抄水', { mustHit: 1 }]
     ]
   },
   yihua: {
@@ -405,10 +474,21 @@ const SECTS = {
     base: { hp: 110, mp: 66, atk: 15, def: 6, spd: 9, crt: 8 },
     grow: { hp: 17, mp: 13, atk: 3.6, def: 1.7, spd: 1.3, crt: 1.3 },
     skills: [
-      ['移花诀'], ['落花掌'], ['移形换位'], ['飞花摘叶', { hits: 2 }],
-      ['碎玉掌'], ['踏雪无痕', { critBonus: 8 }], ['玉碎昆冈', { hpCost: .08 }], ['移花接玉', { lifesteal: .35 }],
-      ['镜花水月', { dot: .15 }], ['明玉诀', { mpDrain: 28 }], ['焚玉掌', { hpCost: .1 }], ['借花献佛', { lifesteal: .45 }],
-      ['明玉九转', { heal: .3, lifesteal: .3 }], ['明玉功', { lifesteal: .5 }], ['嫁衣神功', { hpCost: .12, mustCrit: true }]
+      /* s0 rt */ ['移花诀'],
+      /* s1 rt */ ['落花掌'],
+      /* s2 in */ ['移花心法'],
+      /* s3 rt */ ['飞花摘叶', { hits: 2 }],
+      /* s4 ag */ ['落英身法'],
+      /* s5 rt */ ['碎玉掌', { critBonus: 5 }],
+      /* s6 rt */ ['玉碎昆冈', { hpCost: .06 }],
+      /* s7 in */ ['明玉诀', { drain: 1 }],
+      /* s8 rt */ ['焚玉掌', { dot: .12, hpCost: .08 }],
+      /* s9 ag */ ['惊鸿照影'],
+      /* s10 rt */ ['移花接玉', { lifesteal: .3 }],
+      /* s11 in */ ['嫁衣神功'],
+      /* s12 rt */ ['明玉掌', { lifesteal: .4 }],
+      /* s13 in */ ['明玉功', { drain: 1 }],
+      /* s14 ag */ ['踏雪无痕']
     ]
   },
   gaibang: {
@@ -417,10 +497,21 @@ const SECTS = {
     base: { hp: 125, mp: 58, atk: 16, def: 7, spd: 7, crt: 7 },
     grow: { hp: 21, mp: 10, atk: 3.9, def: 2.1, spd: 1.0, crt: 1.1 },
     skills: [
-      ['太祖长拳'], ['太祖棒法'], ['疯魔杖法'], ['逍遥游'],
-      ['铁帚腿法'], ['莲花掌'], ['蟠龙棍法'], ['亢龙有悔'],
-      ['飞龙在天'], ['龙战于野', { hits: 2 }], ['潜龙勿用', { stun: .25 }], ['密云不雨', { defBuff: 2 }],
-      ['或跃在渊', { hits: 2 }], ['打狗棒法', { hits: 2, stun: .2 }], ['降龙十八掌', { mustCrit: true }]
+      /* s0 rt */ ['太祖长拳'],
+      /* s1 rt */ ['莲花掌'],
+      /* s2 in */ ['丐帮心法'],
+      /* s3 rt */ ['疯魔杖法', { stun: .12 }],
+      /* s4 ag */ ['铁帚腿法'],
+      /* s5 rt */ ['逍遥游', { critBonus: 5 }],
+      /* s6 rt */ ['蟠龙棍法', { hits: 2 }],
+      /* s7 in */ ['醉侠心法'],
+      /* s8 rt */ ['龙战于野', { hits: 2 }],
+      /* s9 ag */ ['醉仙步'],
+      /* s10 rt */ ['潜龙勿用', { stun: .25 }],
+      /* s11 in */ ['混元一气功'],
+      /* s12 rt */ ['打狗棒法', { hits: 2, stun: .18 }],
+      /* s13 in */ ['潜龙诀'],
+      /* s14 ag */ ['狂风扫叶腿']
     ]
   },
   taohua: {
@@ -429,10 +520,21 @@ const SECTS = {
     base: { hp: 100, mp: 64, atk: 14, def: 6, spd: 11, crt: 9 },
     grow: { hp: 16, mp: 13, atk: 3.4, def: 1.6, spd: 1.6, crt: 1.4 },
     skills: [
-      ['碧波掌法'], ['扫叶腿'], ['落英神剑掌', { hits: 2 }], ['兰花拂穴手', { stun: .2 }],
-      ['玉箫剑法'], ['碧海潮生曲', { dot: .14 }], ['弹指神通', { critBonus: 10 }], ['落英剑法', { hits: 3 }],
-      ['奇门五转', { atkBuff: 2 }], ['五行轮转', { defBuff: 2 }], ['踏罡步斗', { critBonus: 8, stun: .12 }], ['碧海生潮', { hits: 2, dot: .12 }],
-      ['弹指惊天', { mustHit: true, critBonus: 8 }], ['玉箫剑气', { ignoreDef: true }], ['落英神剑', { mustCrit: true, hits: 2 }]
+      /* s0 rt */ ['碧波掌法'],
+      /* s1 rt */ ['玉箫剑法', { critBonus: 4 }],
+      /* s2 in */ ['桃源内息'],
+      /* s3 rt */ ['落英神剑掌', { hits: 2 }],
+      /* s4 ag */ ['落花身法'],
+      /* s5 rt */ ['兰花拂穴手', { stun: .18 }],
+      /* s6 rt */ ['落英剑法', { hits: 3 }],
+      /* s7 in */ ['五行轮转'],
+      /* s8 rt */ ['弹指神通', { critBonus: 10 }],
+      /* s9 ag */ ['云步仙踪'],
+      /* s10 rt */ ['碧海生潮', { hits: 2, dot: .1 }],
+      /* s11 in */ ['奇门心法'],
+      /* s12 rt */ ['弹指惊天', { mustHit: 1 }],
+      /* s13 in */ ['碧海潮生曲'],
+      /* s14 ag */ ['踏罡步斗']
     ]
   },
   lingjiu: {
@@ -441,10 +543,21 @@ const SECTS = {
     base: { hp: 110, mp: 70, atk: 15, def: 6, spd: 9, crt: 8 },
     grow: { hp: 18, mp: 14, atk: 3.5, def: 1.7, spd: 1.2, crt: 1.2 },
     skills: [
-      ['灵鹫掌法'], ['雪影掌'], ['折梅手'], ['天山六阳掌'],
-      ['寒冰绵掌', { dot: .12 }], ['白虹掌力', { critBonus: 8 }], ['传音搜魂', { stun: .2 }], ['小无相功', { mpDrain: 25 }],
-      ['天山折梅手', { hits: 2 }], ['冰魄寒光', { hits: 2, dot: .1 }], ['六阳融雪', { heal: .35 }], ['生死符', { dot: .22, mustHit: true }],
-      ['冰封千里', { stun: .3 }], ['八荒六合', { atkBuff: 2, lifesteal: .3 }], ['九天摘星手', { mustCrit: true }]
+      /* s0 rt */ ['灵鹫掌法'],
+      /* s1 rt */ ['雪影掌', { critBonus: 4 }],
+      /* s2 in */ ['天池真气'],
+      /* s3 rt */ ['折梅手'],
+      /* s4 ag */ ['雪地飞鸿'],
+      /* s5 rt */ ['天山六阳掌', { critBonus: 6 }],
+      /* s6 rt */ ['寒冰绵掌', { dot: .12 }],
+      /* s7 in */ ['六阳融雪'],
+      /* s8 rt */ ['白虹掌力', { critBonus: 8 }],
+      /* s9 ag */ ['缥缈身法'],
+      /* s10 rt */ ['天山折梅手', { hits: 2 }],
+      /* s11 in */ ['小无相功'],
+      /* s12 rt */ ['生死符', { dot: .22, mustHit: 1 }],
+      /* s13 in */ ['八荒六合唯我独尊功'],
+      /* s14 ag */ ['月影穿云']
     ]
   },
   duan: {
@@ -453,11 +566,21 @@ const SECTS = {
     base: { hp: 120, mp: 62, atk: 15, def: 7, spd: 8, crt: 7 },
     grow: { hp: 20, mp: 12, atk: 3.4, def: 2.2, spd: 1.0, crt: 1.0 },
     skills: [
-      ['段家剑法'], ['天南掌法'], ['一阳指 · 三品'], ['一阳指 · 二品', { critBonus: 6 }],
-      ['枯荣禅功', { heal: .3 }], ['六脉神剑 · 少商剑'], ['六脉神剑 · 商阳剑'], ['六脉神剑 · 中冲剑', { hits: 2 }],
-      ['六脉神剑 · 关冲剑', { critBonus: 8 }], ['六脉神剑 · 少冲剑', { hits: 2 }], ['六脉神剑 · 少泽剑', { stun: .2 }],
-      ['六剑齐发', { hits: 3 }], ['剑气长虹', { ignoreDef: true }], ['剑气纵横', { hits: 2, mustHit: true }],
-      ['万剑归宗', { mustCrit: true }]
+      /* s0 rt */ ['段家剑法'],
+      /* s1 rt */ ['天南掌法'],
+      /* s2 in */ ['段氏罡气'],
+      /* s3 rt */ ['一阳指', { critBonus: 6 }],
+      /* s4 ag */ ['天南步法'],
+      /* s5 rt */ ['六脉神剑 · 少商剑', { critBonus: 8 }],
+      /* s6 rt */ ['六脉神剑 · 中冲剑', { hits: 2 }],
+      /* s7 in */ ['一阳玄功'],
+      /* s8 rt */ ['剑气纵横', { hits: 2 }],
+      /* s9 ag */ ['飞凤回翔'],
+      /* s10 rt */ ['六脉神剑 · 少泽剑', { stun: .2 }],
+      /* s11 in */ ['枯荣禅功'],
+      /* s12 rt */ ['六剑齐发', { hits: 3 }],
+      /* s13 in */ ['六脉心诀'],
+      /* s14 ag */ ['凌空虚度']
     ]
   },
   baiyun: {
@@ -466,57 +589,71 @@ const SECTS = {
     base: { hp: 95, mp: 58, atk: 17, def: 5, spd: 11, crt: 11 },
     grow: { hp: 15, mp: 11, atk: 4.2, def: 1.4, spd: 1.5, crt: 1.8 },
     skills: [
-      ['白云剑法'], ['流云剑法'], ['浮云剑式'], ['拂柳剑法'],
-      ['停云剑式', { critBonus: 8 }], ['望月式'], ['追星赶月', { hits: 2 }], ['云卷云舒', { dot: .13 }],
-      ['青冥剑气'], ['断云式', { critBonus: 12 }], ['孤城落日', { atkBuff: 2 }], ['清风拂柳', { stun: .22 }],
-      ['一剑西来', { mustHit: true }], ['剑破长空', { hits: 2 }], ['天外飞仙', { mustHit: true, mustCrit: true, ignoreDef: true }]
+      /* s0 rt */ ['白云剑法'],
+      /* s1 rt */ ['浮云剑式', { critBonus: 4 }],
+      /* s2 in */ ['明月真气'],
+      /* s3 rt */ ['拂柳剑法', { critBonus: 6 }],
+      /* s4 ag */ ['流云身法'],
+      /* s5 rt */ ['停云剑式', { critBonus: 8 }],
+      /* s6 rt */ ['追星赶月', { hits: 2 }],
+      /* s7 in */ ['御剑玄功'],
+      /* s8 rt */ ['青冥剑气', { critBonus: 10 }],
+      /* s9 ag */ ['踏月留香'],
+      /* s10 rt */ ['断云式', { critBonus: 12 }],
+      /* s11 in */ ['天外流云诀'],
+      /* s12 rt */ ['一剑西来', { mustHit: 1 }],
+      /* s13 in */ ['剑皇心诀'],
+      /* s14 ag */ ['天际流光']
     ]
   }
 };
 
-// 通用武学（秘籍习得，20 种）
+// 通用武学（秘籍习得，20 种：12 套路 + 5 内功 + 3 轻功）
 const UNIVERSAL_SKILLS = [
-  ['基础剑法', { mult: .9 }], ['基础刀法', { mult: .9 }], ['基础掌法', { mult: .9 }],
-  ['混元功', { mpDrain: 15 }], ['吐纳术', { heal: .2 }], ['铁砂掌', { stun: .12 }],
-  ['大伏虎拳', { mult: 1.1 }], ['金钟罩', { defBuff: 2 }], ['铁布衫', { defBuff: 3 }],
-  ['八段锦', { heal: .25, healMp: .15 }], ['五禽戏', { heal: .3 }], ['太祖棍法', { mult: 1.15 }],
-  ['燕青拳', { hits: 2 }], ['八极拳', { stun: .18 }], ['形意拳', { critBonus: 8 }],
-  ['八卦掌', { hits: 2 }], ['通背拳', { critBonus: 6 }], ['劈挂掌', { mult: 1.2 }],
-  ['佛山无影脚', { hits: 3 }], ['醉拳', { atkBuff: 2, critBonus: 10 }]
+  ['基础剑法', { cat: 'rt', mult: .9 }], ['基础刀法', { cat: 'rt', mult: .9 }], ['基础掌法', { cat: 'rt', mult: .9 }],
+  ['混元功', { cat: 'in' }], ['吐纳术', { cat: 'in' }], ['铁砂掌', { cat: 'rt', stun: .12 }],
+  ['大伏虎拳', { cat: 'rt', mult: 1.1 }], ['金钟罩', { cat: 'in' }], ['铁布衫', { cat: 'in' }],
+  ['八段锦', { cat: 'in' }], ['太祖棍法', { cat: 'rt', mult: 1.15 }],
+  ['燕青拳', { cat: 'rt', hits: 2 }], ['八极拳', { cat: 'rt', stun: .18 }], ['形意拳', { cat: 'rt', critBonus: 8 }],
+  ['八卦掌', { cat: 'rt', hits: 2 }], ['劈挂掌', { cat: 'rt', mult: 1.2 }],
+  ['佛山无影脚', { cat: 'rt', hits: 3 }],
+  ['壁虎游墙', { cat: 'ag' }], ['草上飞', { cat: 'ag' }], ['踏浪行', { cat: 'ag' }]
 ];
 
-// 隐世武学（奇遇/头目习得，30 种）
+// 隐世武学（奇遇/头目习得，32 种：19 套路 + 11 内功 + 2 轻功）
 const HIDDEN_SKILLS = {
-  jiuyang:      ['九阳神功', { heal: .45, healMp: .35, atkBuff: 2 }],
-  jiuyin:       ['九阴真经', { hits: 2, critBonus: 10 }],
-  dugu:         ['独孤九剑', { ignoreDef: true, mustCrit: true }],
-  beiming:      ['北冥神功', { mpDrain: 45, mult: 1.2 }],
-  qiankun:      ['乾坤大挪移', { lifesteal: .5 }],
-  taixuan:      ['太玄经', { hits: 3 }],
-  shenzhao:     ['神照经', { heal: .6, healMp: .5 }],
-  longxiang:    ['龙象般若功', { mult: 1.4, stun: .2 }],
-  xuantiejian:  ['玄铁剑法', { hpCost: .08, mult: 1.3 }],
-  huoyandao:    ['火焰刀', { dot: .25 }],
-  hamagong:     ['蛤蟆功', { stun: .3, mult: 1.15 }],
-  kongming:     ['空明拳', { hits: 2, mustHit: true }],
-  zuoyouhubo:   ['左右互搏', { hits: 2, mult: 1.1 }],
-  xiantian:     ['先天功', { atkBuff: 3, defBuff: 2 }],
-  tiancan:      ['天蚕神功', { heal: .5, defBuff: 2 }],
-  xuedaodao:    ['血刀刀法', { lifesteal: .4, mult: 1.15 }],
-  fanliangyi:   ['反两仪刀法', { hits: 2, critBonus: 6 }],
-  jinshejian:   ['金蛇剑法', { critBonus: 15 }],
-  bixiejianfa:  ['辟邪剑法', { mustCrit: true, mult: 1.15 }],
-  taijiquan:    ['太极拳', { defBuff: 2, heal: .25 }],
-  huagong:      ['化功大法', { mpDrain: 40 }],
-  xixing:       ['吸星大法', { lifesteal: .35, mpDrain: 25 }],
-  xuanming:     ['玄冥神掌', { dot: .28, stun: .15 }],
-  qishang:      ['七伤拳', { hpCost: .1, mult: 1.35 }],
-  duoming15:    ['夺命十五剑', { mustCrit: true, ignoreDef: true }],
-  lingxiyz:     ['灵犀一指', { critBonus: 20, stun: .18 }],
-  damoji:       ['达摩剑法', { hits: 2, mustHit: true }],
-  weituogun:    ['韦陀棍法', { stun: .22, mult: 1.1 }],
-  poyun:        ['破云掌', { hits: 2, mult: 1.2 }],
-  wanjianjue:   ['万剑诀', { hits: 3, critBonus: 8 }]
+  jiuyang:      ['九阳神功', { cat: 'in' }],
+  jiuyin:       ['九阴真经', { cat: 'in' }],
+  dugu:         ['独孤九剑', { cat: 'rt', ignoreDef: 1, mustCrit: 1 }],
+  beiming:      ['北冥神功', { cat: 'in', drain: 1, mult: 1.2 }],
+  qiankun:      ['乾坤大挪移', { cat: 'in' }],
+  taixuan:      ['太玄经', { cat: 'in' }],
+  shenzhao:     ['神照经', { cat: 'in' }],
+  longxiang:    ['龙象般若功', { cat: 'in', mult: 1.4 }],
+  xuantiejian:  ['玄铁剑法', { cat: 'rt', hpCost: .08, mult: 1.3 }],
+  huoyandao:    ['火焰刀', { cat: 'rt', dot: .25 }],
+  hamagong:     ['蛤蟆功', { cat: 'rt', stun: .3, mult: 1.15 }],
+  kongming:     ['空明拳', { cat: 'rt', hits: 2, mustHit: 1 }],
+  zuoyouhubo:   ['左右互搏', { cat: 'rt', hits: 2, mult: 1.1 }],
+  xiantian:     ['先天功', { cat: 'in' }],
+  tiancan:      ['天蚕神功', { cat: 'in' }],
+  xuedaodao:    ['血刀刀法', { cat: 'rt', lifesteal: .4, mult: 1.15 }],
+  fanliangyi:   ['反两仪刀法', { cat: 'rt', hits: 2, critBonus: 6 }],
+  jinshejian:   ['金蛇剑法', { cat: 'rt', critBonus: 15 }],
+  bixiejianfa:  ['辟邪剑法', { cat: 'rt', mustCrit: 1, mult: 1.15 }],
+  taijiquan:    ['太极拳', { cat: 'rt', defBuff: 2 }],
+  huagong:      ['化功大法', { cat: 'in', drain: 1 }],
+  xixing:       ['吸星大法', { cat: 'in', drain: 1 }],
+  xuanming:     ['玄冥神掌', { cat: 'rt', dot: .28, stun: .15 }],
+  qishang:      ['七伤拳', { cat: 'rt', hpCost: .1, mult: 1.35 }],
+  duoming15:    ['夺命十五剑', { cat: 'rt', mustCrit: 1, ignoreDef: 1 }],
+  lingxiyz:     ['灵犀一指', { cat: 'rt', critBonus: 20, stun: .18 }],
+  damoji:       ['达摩剑法', { cat: 'rt', hits: 2, mustHit: 1 }],
+  weituogun:    ['韦陀棍法', { cat: 'rt', stun: .22, mult: 1.1 }],
+  poyun:        ['破云掌', { cat: 'rt', hits: 2, mult: 1.2 }],
+  wanjianjue:   ['万剑诀', { cat: 'rt', hits: 3, critBonus: 8 }],
+  lingbo:       ['凌波微步', { cat: 'ag', mustHit: 1 }],
+  shenxingbai:  ['神行百变', { cat: 'ag' }]
 };
 /* ============ 数据：物品体系（300+，由生成器装配） ============ */
 
@@ -762,14 +899,14 @@ function boss(name, lv, o = {}) {
 }
 const BOSSES = {
   zhouba: boss('镇关西 · 周霸', 4, { flavor: '"江南这一带，规矩由我定！"', skills: [{ name: '横扫千军', mult: 1.95, chance: .42 }], reward: { silver: 300, item: 'w_tiejian' } }),
-  dugucan: boss('剑痴 · 独孤残', 14, { flavor: '"三十年了……终于有人配让我出剑。"', skills: [{ name: '独孤剑意', mult: 2.0, chance: .38 }], reward: { silver: 900, skill: 'dugu', item: 'w_poJunjian' } }),
-  jinlunseng: boss('蒙古国师 · 金轮僧', 24, { flavor: '"龙象般若，十龙十象之力！"', skills: [{ name: '五轮齐飞', mult: 2.6, chance: .45 }], reward: { silver: 2200, potions: { dahuan: 2 }, sp: 'feilin' } }),
+  dugucan: boss('剑痴 · 独孤残', 14, { flavor: '"三十年了……终于有人配让我出剑。"', skills: [{ name: '独孤剑意', mult: 1.85, chance: .33 }], reward: { silver: 900, skill: 'dugu', item: 'w_poJunjian' } }),
+  jinlunseng: boss('蒙古国师 · 金轮僧', 24, { atkMul: 1.9, flavor: '"龙象般若，十龙十象之力！"', skills: [{ name: '五轮齐飞', mult: 2.75, chance: .5 }], reward: { silver: 2200, potions: { dahuan: 2 }, sp: 'feilin' } }),
   shalifei: boss('大漠凶鹰 · 沙里飞', 28, { flavor: '"大漠孤烟直，长河落日……刀！"', skills: [{ name: '连环旋风刀', mult: 2.45, chance: .42 }], reward: { silver: 3200, item: 'a_ruanweijia' } }),
-  guimian: boss('鬼面判官', 31, { hpMul: 8.8, atkMul: 2.0, flavor: '"生死簿上，又添一名。"', skills: [{ name: '勾魂锁链', mult: 3.2, chance: .55 }], reward: { silver: 4500, potions: { dahuan: 3 } } }),
-  duanyanping: boss('大理逆徒 · 段延平', 35, { flavor: '"段氏的江山，本来就该是我的！"', skills: [{ name: '一阳指 · 邪焰', mult: 2.3, chance: .4 }, { name: '段家剑 · 血影', mult: 1.8, chance: .32 }], reward: { silver: 6500, potions: { xuelian: 2 }, sp: 'daliYudai' } }),
-  chenguiseng: boss('恶僧 · 成鬼僧', 39, { flavor: '"混元霹雳功成之日，便是尔等授首之时！"', skills: [{ name: '幻阴指', mult: 2.45, chance: .4 }], reward: { silver: 9000, skill: 'qiankun', sp: 'shenghuo' } }),
+  guimian: boss('鬼面判官', 31, { hpMul: 8.8, atkMul: 1.78, flavor: '"生死簿上，又添一名。"', skills: [{ name: '勾魂锁链', mult: 2.75, chance: .5 }], reward: { silver: 4500, potions: { dahuan: 3 } } }),
+  duanyanping: boss('大理逆徒 · 段延平', 35, { atkMul: 1.82, flavor: '"段氏的江山，本来就该是我的！"', skills: [{ name: '一阳指 · 邪焰', mult: 2.3, chance: .4 }, { name: '段家剑 · 血影', mult: 1.8, chance: .32 }], reward: { silver: 6500, potions: { xuelian: 2 }, sp: 'daliYudai' } }),
+  chenguiseng: boss('恶僧 · 成鬼僧', 39, { hpMul: 10.2, atkMul: 2.0, flavor: '"混元霹雳功成之日，便是尔等授首之时！"', skills: [{ name: '幻阴指', mult: 2.75, chance: .42 }], reward: { silver: 9000, skill: 'qiankun', sp: 'shenghuo' } }),
   dinglaoguai: boss('星宿老怪 · 丁老怪', 43, { flavor: '"星宿老仙，法力无边！"', skills: [{ name: '化功绵掌', mult: 2.45, chance: .4 }], reward: { silver: 12000, sp: 'shexinZhu' } }),
-  yuehuagongzhu: boss('月华宫主', 47, { atkMul: 1.58, flavor: '"能接我三掌者，方可离去。"', skills: [{ name: '明玉掌', mult: 1.85, chance: .35 }, { name: '移花接玉', mult: 1.4, chance: .22, lifesteal: .45 }], reward: { silver: 18000, sp: 'jianhun' } }),
+  yuehuagongzhu: boss('月华宫主', 47, { hpMul: 10.5, atkMul: 2.05, flavor: '"能接我三掌者，方可离去。"', skills: [{ name: '明玉掌', mult: 2.15, chance: .4 }, { name: '移花接玉', mult: 1.6, chance: .25, lifesteal: .45 }], reward: { silver: 18000, sp: 'jianhun' } }),
   dongfangyao: boss('魔教教主 · 东方曜', 50, { flavor: '"日出东方，唯我不败！"', skills: [{ name: '日月同辉', mult: 2.3, chance: .35 }, { name: '魔功滔天', mult: 2.6, chance: .25 }], reward: { silver: 50000 } }),
   // 支线
   taohuaDaozhu: boss('桃花岛主 · 黄青霞', 11, { flavor: '"五行八卦，生门在西北。找得到，算你赢。"', skills: [{ name: '碧海潮生', mult: 2.2, chance: .4 }], reward: { silver: 800, item: 'acc_yuxiao' }, side: true }),
@@ -839,60 +976,269 @@ const COMPANIONS = {
   ganxiaomei: { name: '铸剑传人 · 干小妹', role: 'sup', from: '昆仑山奇遇', recruit: 'event', map: 'kunlun', lvReq: 36, desc: '铸剑世家最后传人。锻造成功率 +10%。', skill: '锻气加身', perk: 'forgeRate' },
   yewushuang: { name: '影卫 · 夜无双', role: 'atk', from: '幽冥谷救出', recruit: 'event', map: 'youminggu', lvReq: 45, desc: '魔教影卫，因抗命被囚十年。他话不多，出刀很快。', skill: '无影暗杀' }
 };
-/* ============ 生成器：武学 / 物品 / 敌人 装配 ============ */
+/* ============ 生成器：武学（含五式招法）/ 物品 / 敌人 装配 ============ */
 
 const GEN = {};
 
+// ---------- 武学招法体系 ----------
+// 每门武学含五式：一式入门(1.00) / 二式进阶(1.15) / 三式精要(1.30) / 四式奥义(1.45) / 五式大成(1.65)
+// 一式即旧版整门武学之力，五式大成为其 1.65 倍，需再修 10 级方可参悟
+const MV_MULT = [1.0, 1.15, 1.3, 1.45, 1.65];
+const MV_MP = [.65, .8, 1, 1.25, 1.55];
+const MV_UNLOCK = [0, 2, 4, 7, 10];   // 招式相对武学等级的解锁偏移
+const MV_NAME = ['一式', '二式', '三式', '四式', '五式'];
+
+const CAT_NAME = { rt: '套路', in: '内功', ag: '轻功' };
+
+// 套路招式名池（按兵器类型）
+const MOVE_POOLS = {
+  剑: ['拨剑式', '回锋撩剑', '流云剑走', '剑气纵横', '万剑归一'],
+  刀: ['力劈华山', '回风斩', '连环狂刀', '刀芒断岳', '一刀断魂'],
+  拳: ['黑虎掏心', '崩拳连发', '双风贯耳', '拳出如雷', '石破天惊'],
+  掌: ['劈空掌', '震山掌', '双掌合璧', '掌影漫天', '开碑裂石'],
+  指: ['弹指点穴', '指走偏锋', '金指点脉', '指风如锥', '一指破空'],
+  腿: ['扫堂腿', '连环鸳鸯腿', '旋风连环腿', '无影腿影', '腿荡千军'],
+  棍: ['横扫千军', '拨草寻蛇', '当头棒喝', '棍影如山', '棍荡八荒'],
+  杖: ['横扫千军', '拨草寻蛇', '当头棒喝', '杖影如山', '杖荡八荒'],
+  针: ['弹指飞针', '漫天针雨', '飞星逐月', '透骨钉魂', '万针穿心'],
+  石: ['弹指飞石', '连珠石雨', '流星赶月', '破空石锥', '石破天惊'],
+  箭: ['袖箭激射', '连珠快箭', '破空一箭', '追魂夺命', '箭雨蔽日'],
+  袖: ['流云拂袖', '飞袖穿云', '长袖善舞', '袖里乾坤', '拂袖断岳'],
+  手: ['探囊取物', '擒拿锁扣', '锁筋错骨', '缠丝擒拿', '空手入白刃'],
+  铃: ['银索缠腕', '金铃振响', '索影连环', '飞铃夺魄', '索锁乾坤'],
+  诀: ['起手式', '连环进招', '真气贯注', '排山倒海', '神威盖世'],
+  通用: ['起手式', '连环进招', '真气贯注', '排山倒海', '神威盖世']
+};
+
+// 标志性武学的专属招法（取自原著）
+const SIGNATURE_MOVES = {
+  shaolin_s12: ['佛光初现', '佛动山河', '佛问迦蓝', '万佛朝宗', '如来神掌'],
+  shaolin_s14: ['踏浪而行', '芦苇借力', '轻功水上飘', '一苇渡江', '达摩渡江'],
+  wudang_s12: ['剑分阴阳', '真武荡魔', '龟蛇相缠', '七星斩罡', '真武归一'],
+  wudang_s14: ['提纵轻灵', '踏云而上', '云梯纵跃', '紫霄飞升', '梯云纵'],
+  gumu_s12: ['心惊胆落', '杞人忧天', '无中生有', '拖泥带水', '黯然销魂'],
+  gumu_s14: ['踏虚而行', '凌空微步', '御风飞行', '凌虚踏空', '凌虚蹈虚'],
+  feidao_s12: ['凝神静气', '袖里乾坤', '飞刀离手', '例不虚发', '一剑封喉'],
+  feidao_s14: ['一抄而起', '二度纵身', '三抄掠空', '燕子回翔', '燕子三抄水'],
+  yihua_s12: ['玉掌生辉', '明玉映月', '移花接木', '玉宇澄清', '明玉照大千'],
+  yihua_s14: ['踏雪寻梅', '雪地无痕', '凌波踏雪', '雪泥鸿爪', '踏雪无痕'],
+  gaibang_s12: ['绊', '劈', '缠', '戳', '天下无狗'],
+  gaibang_s14: ['旋风起', '落叶纷飞', '狂风怒卷', '扫叶千军', '狂风扫叶'],
+  taohua_s12: ['弹指惊雷', '指点江山', '弹指流光', '神通初显', '弹指惊天'],
+  taohua_s14: ['步罡踏斗', '五行易位', '奇门遁走', '罡步九宫', '踏罡步斗'],
+  lingjiu_s12: ['符出无形', '寒符入体', '生死相缠', '阴阳倒转', '生死符'],
+  lingjiu_s14: ['月下穿影', '云间纵跃', '踏月而行', '月华流转', '月影穿云'],
+  duan_s12: ['少商剑出', '商阳剑鸣', '中冲剑气', '关冲剑浪', '六剑齐发'],
+  duan_s14: ['凌空蹈虚', '气御飞身', '虚步凌云', '御剑而行', '凌空虚度'],
+  baiyun_s12: ['剑势如虹', '一剑破空', '流云飞袖', '一剑西来', '天外飞仙'],
+  baiyun_s14: ['流光一闪', '天光云影', '流光掠影', '光华万丈', '天际流光'],
+  // 隐世绝学
+  dugu: ['总诀式', '破剑式', '破刀式', '破气式', '无招胜有招'],
+  jiuyin: ['摧坚神爪', '白蟒鞭法', '大伏魔拳', '移魂大法', '九阴归一'],
+  jiuyang: ['氤氲紫气', '九阳护体', '纯阳无极', '金刚不坏', '九阳大成'],
+  taijiquan: ['揽雀尾', '单鞭', '白鹤亮翅', '云手', '太极归元'],
+  wanjianjue: ['剑意凝形', '万剑齐鸣', '剑气如虹', '剑网天罗', '万剑归宗'],
+  bixiejianfa: ['辟邪十三剑', '飞燕穿柳', '流星飞堕', '扫荡群魔', '辟邪无双'],
+  duoming15: ['一剑封喉', '两剑夺魄', '三剑断魂', '十四剑影', '夺命十五剑'],
+  lingbo: ['凌波微步', '微步生尘', '踏罡步斗', '神行百变', '凌波仙踪'],
+  beiming: ['北冥吐纳', '鲸吞百川', '真气倒流', '吸功纳气', '北冥大成']
+};
+
+// 被动招式名池
+const PAS_POOLS = {
+  rt: ['招式娴熟', '劲力贯通', '收发自如', '势大力沉', '心随意动', '熟能生巧'],
+  in: ['凝气培元', '真气护体', '气走经脉', '生生不息', '丹田气海', '血气调和', '内息绵长', '固本培元'],
+  ag: ['轻身提纵', '身法灵动', '步法精妙', '来去如风', '足下生云', '影随身动', '疾如流星', '飘忽无踪']
+};
+
+// 被动数值公式（随武学等级成长）
+const PAS_VAL = {
+  atk: lv => Math.round(1 + lv * .25),
+  crt: lv => Math.round((.8 + lv * .3) * 10) / 10,
+  atkp: lv => Math.round((2 + lv * .18) * 10) / 10,
+  ls: lv => Math.round((3 + lv * .15) * 10) / 10,
+  hp: lv => Math.round(3 + lv * .8),
+  mp: lv => Math.round(3 + lv * 1.1),
+  def: lv => Math.round(1 + lv * .28),
+  regen: lv => Math.round((.5 + lv * .06) * 10) / 10,
+  mpregen: lv => Math.round(1 + lv * .18),
+  dmgred: lv => Math.round((1.2 + lv * .09) * 10) / 10,
+  hppct: lv => Math.round((1 + lv * .12) * 10) / 10,
+  spd: lv => Math.round(1 + lv * .22),
+  dodge: lv => Math.round((.6 + lv * .14) * 10) / 10
+};
+
+// 确定性伪随机（以武学 id 为种子）
+function seedHash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+function pickBy(list, seed) { return list[seed % list.length]; }
+function pickN(list, seed, n) {
+  const out = [];
+  let i = 0;
+  while (out.length < n && i < 40) { const v = list[(seed + i * 7) % list.length]; if (!out.includes(v)) out.push(v); i++; }
+  return out;
+}
+
+function r1(x) { return Math.round(x * 10) / 10; }
+
+// 探测武学兵器类型（决定套路招式名池）
+function skillTypeOf(name) {
+  const keys = ['剑', '刀', '拳', '掌', '指', '腿', '棍', '杖', '针', '石', '箭', '袖', '手', '铃'];
+  for (const k of keys) if (name.includes(k)) return k;
+  return '通用';
+}
+
+// 生成被动招式
+function mkPas(cat, seed, lv, boost = 1) {
+  let key;
+  if (cat === 'rt') {
+    key = pickBy(['atk', 'crt', 'atkp', 'ls'], seed);
+  } else if (cat === 'in') {
+    key = pickBy(['hp', 'mp', 'def', 'regen', 'mpregen'], seed);
+  } else {
+    key = pickBy(['spd', 'dodge', 'crt'], seed);
+  }
+  let v = PAS_VAL[key](lv);
+  if (boost !== 1) v = key === 'firstCrit' ? v : Math.round(v * boost * 10) / 10;
+  return { t: 'pas', fx: { [key]: v } };
+}
+
+// 生成五式招法
+// rt: 一二四五式为主动（绝招带终结特性），三式为被动
+// in: 二式为主动（运功疗伤 / 吞纳真气），其余四式为被动（五式最强）
+// ag: 三式为主动（凌空迅击），其余四式为被动（五式最强）
+function genMoves(sk) {
+  const fx = sk.fx || {}, lv = sk.lv, h = seedHash(sk.id);
+  const moves = [];
+
+  if (sk.cat === 'rt') {
+    const names = SIGNATURE_MOVES[sk.id] || MOVE_POOLS[skillTypeOf(sk.name)] || MOVE_POOLS.通用;
+    // 特性分配：攻击 hint 按序分给 二式 / 四式 / 五式
+    const hints = [];
+    ['hits', 'critBonus', 'dot', 'lifesteal', 'mpDrain', 'defBuff', 'atkBuff', 'hpCost', 'stun', 'ignoreDef', 'mustHit', 'mustCrit']
+      .forEach(k => { if (fx[k]) hints.push([k, fx[k]]); });
+    const take = slots => {
+      const o = {};
+      slots.forEach(idx => { if (hints[idx]) o[hints[idx][0]] = hints[idx][1]; });
+      return o;
+    };
+    moves.push(Object.assign({ name: names[0], t: 'act', mult: r1(sk.mult * MV_MULT[0]), mp: Math.round(sk.mp * MV_MP[0]) }));
+    moves.push(Object.assign({ name: names[1], t: 'act', mult: r1(sk.mult * MV_MULT[1]), mp: Math.round(sk.mp * MV_MP[1]) }, take([0])));
+    moves.push(Object.assign({ name: names[2], t: 'pas' }, mkPas('rt', h + 3, lv)));
+    moves.push(Object.assign({ name: names[3], t: 'act', mult: r1(sk.mult * MV_MULT[3]), mp: Math.round(sk.mp * MV_MP[3]) }, take([1])));
+    const fin = Object.assign({ name: names[4], t: 'act', mult: r1(sk.mult * MV_MULT[4]), mp: Math.round(sk.mp * MV_MP[4]) }, take([2, 3]));
+    if (!fin.mustCrit && !fin.ignoreDef && !fin.mustHit && !fin.stun) fin.critBonus = 8;
+    moves.push(fin);
+  } else if (sk.cat === 'in') {
+    const sig = SIGNATURE_MOVES[sk.id];
+    const pn = i => sig ? sig[i] : PAS_POOLS.in[(h + i * 11) % PAS_POOLS.in.length];
+    moves.push(Object.assign({ name: pn(0) }, mkPas('in', h, lv)));
+    if (fx.drain) {
+      moves.push({ name: sig ? sig[1] : '吞纳真气', t: 'act', mult: r1(sk.mult * .75), mpDrain: Math.round(12 + lv * 1.2), mp: Math.round(sk.mp * .8) });
+    } else {
+      moves.push({ name: '运功疗伤', t: 'act', mult: 0, heal: Math.round((.14 + lv * .005) * 1000) / 1000, healMp: Math.round((.08 + lv * .003) * 1000) / 1000, mp: Math.round(sk.mp * .9) });
+    }
+    moves.push(Object.assign({ name: pn(2) }, mkPas('in', h + 11, lv)));
+    moves.push(Object.assign({ name: pn(3) }, mkPas('in', h + 29, lv)));
+    // 五式 · 神功大成：最强被动（伤害减免 / 气血上限百分比 / 回气），×1.3
+    const strongKey = pickBy(['dmgred', 'hppct', 'regen', 'hp'], h + 7);
+    const strong = { t: 'pas', fx: {} };
+    strong.fx[strongKey] = Math.round(PAS_VAL[strongKey](lv) * 1.3 * 10) / 10;
+    moves.push(Object.assign({ name: sig ? sig[4] : '神功大成' }, strong));
+  } else {
+    const sig = SIGNATURE_MOVES[sk.id];
+    const pn = i => sig ? sig[i] : PAS_POOLS.ag[(h + i * 11) % PAS_POOLS.ag.length];
+    moves.push(Object.assign({ name: pn(0) }, mkPas('ag', h, lv)));
+    moves.push(Object.assign({ name: pn(1) }, mkPas('ag', h + 11, lv)));
+    const swift = { name: sig ? sig[2] : '凌空一击', t: 'act', mult: r1(sk.mult * .9), hits: 2, mp: Math.round(sk.mp * .7) };
+    if (fx.mustHit) swift.mustHit = 1;
+    moves.push(swift);
+    moves.push(Object.assign({ name: pn(3) }, mkPas('ag', h + 29, lv)));
+    // 五式 · 绝顶轻功：高阶（23级+）附带「首击必暴」，否则大幅身法/闪避
+    const fin = { name: sig ? sig[4] : '轻功大成', t: 'pas', fx: {} };
+    if (lv >= 23 && (h % 2 === 0)) fin.fx.firstCrit = 1;
+    else {
+      const k = pickBy(['spd', 'dodge'], h + 7);
+      fin.fx[k] = Math.round(PAS_VAL[k](lv) * 1.4 * 10) / 10;
+    }
+    moves.push(fin);
+  }
+  moves.forEach((m, i) => { m.mv = i + 1; m.unlock = sk.lv + MV_UNLOCK[i]; });
+  return moves;
+}
+
+function moveFxDesc(m) {
+  if (m.t === 'pas') {
+    const D = {
+      atk: v => `攻击 +${v}`, crt: v => `暴击 +${v}%`, atkp: v => `攻击 +${v}%`, ls: v => `攻击吸血 ${v}%`,
+      hp: v => `气血上限 +${v}`, mp: v => `内力上限 +${v}`, def: v => `防御 +${v}`,
+      regen: v => `每回合回复 ${v}% 气血`, mpregen: v => `每回合回复内力 +${v}`,
+      dmgred: v => `受到伤害 -${v}%`, hppct: v => `气血上限 +${v}%`,
+      spd: v => `身法 +${v}`, dodge: v => `闪避 +${v}%`, firstCrit: () => '每战首次出手必定会心'
+    };
+    return Object.entries(m.fx).map(([k, v]) => D[k] ? D[k](v) : k).join('，');
+  }
+  const parts = [];
+  if (m.heal) parts.push(`回复${Math.round(m.heal * 100)}%气血${m.healMp ? `、${Math.round(m.healMp * 100)}%内力` : ''}`);
+  if (m.hits > 1) parts.push(m.hits + '连击');
+  if (m.critBonus) parts.push('暴击+' + m.critBonus + '%');
+  if (m.mustHit) parts.push('必中');
+  if (m.mustCrit) parts.push('必暴击');
+  if (m.ignoreDef) parts.push('无视防御');
+  if (m.stun) parts.push('震慑几率' + Math.round(m.stun * 100) + '%');
+  if (m.lifesteal) parts.push('吸取' + Math.round(m.lifesteal * 100) + '%伤害为气血');
+  if (m.mpDrain) parts.push('吸取内力' + m.mpDrain);
+  if (m.defBuff) parts.push('护体' + m.defBuff + '回合');
+  if (m.atkBuff) parts.push('增攻' + m.atkBuff + '回合');
+  if (m.hpCost) parts.push('自损' + Math.round(m.hpCost * 100) + '%气血');
+  if (m.dot) parts.push('施毒(每回合' + Math.round(m.dot * 100) + '%攻击)');
+  return parts.join('，') || '寻常招式';
+}
+
 // —— 武学装配 ——
-// SKILLS: id -> {id, name, lv, mp, mult, hits, critBonus, mustHit, mustCrit, ignoreDef, stun, lifesteal, mpDrain, heal, healMp, defBuff, atkBuff, hpCost, dot, kind, desc}
+// SKILLS: id -> {id, name, cat, lv, mp, mult, kind, sect, moves[5], desc}
 GEN.buildSkills = function () {
   const S = {
-    basic: { id: 'basic', name: '普通攻击', mp: 0, mult: 1.0, lv: 1, kind: 'basic', desc: '拳脚兵刃招呼，不耗内力。' }
+    basic: { id: 'basic', name: '普通攻击', cat: 'rt', mp: 0, mult: 1.0, lv: 1, kind: 'basic', moves: null, desc: '拳脚兵刃招呼，不耗内力。' }
   };
-  const fxDesc = sk => {
-    const parts = [];
-    if (sk.hits > 1) parts.push(sk.hits + '连击');
-    if (sk.critBonus) parts.push('暴击+' + sk.critBonus + '%');
-    if (sk.mustHit) parts.push('必中');
-    if (sk.mustCrit) parts.push('必暴击');
-    if (sk.ignoreDef) parts.push('无视防御');
-    if (sk.stun) parts.push('震慑几率' + Math.round(sk.stun * 100) + '%');
-    if (sk.lifesteal) parts.push('吸取' + Math.round(sk.lifesteal * 100) + '%伤害为气血');
-    if (sk.mpDrain) parts.push('吸取内力' + sk.mpDrain);
-    if (sk.heal) parts.push('回复' + Math.round(sk.heal * 100) + '%气血');
-    if (sk.healMp) parts.push('回复' + Math.round(sk.healMp * 100) + '%内力');
-    if (sk.defBuff) parts.push('护体' + sk.defBuff + '回合');
-    if (sk.atkBuff) parts.push('增攻' + sk.atkBuff + '回合');
-    if (sk.hpCost) parts.push('自损' + Math.round(sk.hpCost * 100) + '%气血');
-    if (sk.dot) parts.push('施毒(每回合' + Math.round(sk.dot * 100) + '%攻击)');
-    return parts.join('，');
+  const build = (id, name, cat, t, fx, kind, sect) => {
+    const sk = {
+      id, name, cat, kind, sect: sect || null,
+      lv: t.lv, mp: t.mp,
+      mult: Math.round(t.mult * ((fx && fx.mult) || 1) * 100) / 100,
+      fx: fx || {}
+    };
+    sk.moves = genMoves(sk);
+    const bestAct = sk.moves.filter(m => m.t === 'act' && m.mult > 0).reduce((a, b) => (b.mult * (b.hits || 1)) > (a.mult * (a.hits || 1)) ? b : a, { mult: 0, hits: 1 });
+    sk.desc = cat === 'in'
+      ? `内功心法——五式招法，蕴养生克敌之妙。`
+      : cat === 'ag'
+        ? `轻功身法——身轻如燕，来去如风。`
+        : `套路武学——绝招「${bestAct.name}」威力 ${Math.round(bestAct.mult * (bestAct.hits || 1) * 100) / 100} 倍。`;
+    return sk;
   };
-  // 门派武学
+  // 门派武学（按槽位序列分类）
   Object.entries(SECTS).forEach(([sectId, sect]) => {
     sect.skills.forEach((def, i) => {
       const [name, fx] = def;
-      const t = SKILL_TIERS[i];
       const id = sectId + '_s' + i;
-      S[id] = Object.assign({ id, name, lv: t.lv, mp: t.mp, mult: t.mult, kind: 'sect', sect: sectId }, fx || {});
-      S[id].desc = fxDesc(S[id]) || (S[id].heal ? '疗伤武学。' : '攻伐武学。');
+      S[id] = build(id, name, SECT_SKILL_CATS[i], SKILL_TIERS[i], fx || {}, 'sect', sectId);
     });
   });
   // 通用武学（秘籍）
   UNIVERSAL_SKILLS.forEach((def, i) => {
     const [name, fx] = def;
     const t = SKILL_TIERS[Math.min(i * 2, 14)];
-    const id = 'univ' + i;
-    S[id] = Object.assign({ id, name, lv: t.lv, mp: t.mp, mult: t.mult, kind: 'univ' }, fx);
-    if (fx.mult) S[id].mult = t.mult * fx.mult;
-    S[id].desc = fxDesc(S[id]) || '江湖常见武学。';
+    S['univ' + i] = build('univ' + i, name, fx.cat, t, fx, 'univ');
   });
   // 隐世武学
   Object.entries(HIDDEN_SKILLS).forEach(([id, def]) => {
     const [name, fx] = def;
     const t = SKILL_TIERS[13];
-    S[id] = Object.assign({ id, name, lv: fx.lv || t.lv, mp: t.mp, mult: t.mult, kind: 'hidden' }, fx);
-    if (fx.mult) S[id].mult = t.mult * fx.mult;
-    S[id].desc = '隐世绝学：' + fxDesc(S[id]);
+    S[id] = build(id, name, fx.cat, { lv: fx.lv || t.lv, mult: t.mult, mp: t.mp }, fx, 'hidden');
   });
   return S;
 };
@@ -924,7 +1270,7 @@ GEN.buildItems = function () {
     for (let tr = 0; tr < 3; tr++) {
       const def = Math.round(ATYPE_DEF[si] * ATIER_DEF[tr] * 1.2);
       add('a_' + si + '_' + tr, {
-        name: ATIER_PREFIX[tr] + shape, cat: 'equip', slot: 'armor', tier: tr + 1, lv: ATIER_LV[tr],
+        name: (ATIER_PREFIX[tr] || '') + shape, cat: 'equip', slot: 'armor', tier: tr + 1, lv: ATIER_LV[tr],
         def, price: 50 + tr * 240,
         desc: `${ATIER_PREFIX[tr] || ''}${shape}——防御 +${def}。`
       });
@@ -985,7 +1331,7 @@ GEN.buildItems = function () {
     const skillName = def[0];
     add('book_univ' + i, {
       name: '秘籍 · ' + BOOK_NAMES[skillName], cat: 'book', bookSkill: 'univ' + i,
-      price: 800 + i * 150, desc: `研读可习得「${skillName}」。`
+      price: 800 + i * 150, desc: `研读可习得「${skillName}」（${CAT_NAME[def[1].cat]}武学）。`
     });
   });
   // 奇物 18
@@ -1065,6 +1411,79 @@ function forgeAdd(base, id) {
   return s ? Math.max(1, Math.round(base * s * .08)) : 0;
 }
 
+// —— 武学装备槽 ——
+// 套路两门（主/副，提供主动招式），内功、轻功各一门（以被动招式增益为主）
+function equippedSkillIds() {
+  return [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].filter(id => id && SKILLS[id]);
+}
+function moveUnlocked(m) { return P.lv >= m.unlock; }
+
+const SLOT_KEYS = { rt: ['rtSkill', 'rtSkill2'], in: ['inSkill'], ag: ['agSkill'] };
+const SLOT_LABEL = { rtSkill: '主套路', rtSkill2: '副套路', inSkill: '内功', agSkill: '轻功' };
+
+// 武学当前战力评估：套路取已解锁的最强主动招，内功/轻功按招式参悟进度折算
+// （如此，早年武学五式大成之前，不会被刚入门的高阶新武学轻易顶替）
+function skillPower(id) {
+  const sk = SKILLS[id];
+  if (!sk) return 0;
+  if (sk.cat === 'rt') {
+    let best = 0;
+    sk.moves.forEach(m => {
+      if (m.t === 'act' && m.mult > 0 && moveUnlocked(m)) best = Math.max(best, m.mult * (m.hits || 1));
+    });
+    return best || sk.mult * .8;
+  }
+  const un = sk.moves.filter(moveUnlocked).length;
+  return Math.round(sk.mult * (.35 + .65 * un / 5) * 100) / 100;
+}
+
+// 自动运功：空槽直接装，否则替换同系较弱的一门；返回装入的槽位名（未装返回 null）
+function autoEquip(id) {
+  const sk = SKILLS[id];
+  if (!sk || id === 'basic') return null;
+  if ([P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].includes(id)) return null;
+  if (sk.cat === 'rt') {
+    if (!P.rtSkill) { P.rtSkill = id; return '主套路'; }
+    if (!P.rtSkill2) { P.rtSkill2 = id; return '副套路'; }
+    const weak = skillPower(P.rtSkill) <= skillPower(P.rtSkill2) ? 'rtSkill' : 'rtSkill2';
+    if (skillPower(P[weak]) < skillPower(id)) { P[weak] = id; return SLOT_LABEL[weak]; }
+  } else if (sk.cat === 'in') {
+    if (!P.inSkill) { P.inSkill = id; return '内功'; }
+    if (skillPower(P.inSkill) < skillPower(id)) { P.inSkill = id; return '内功'; }
+  } else {
+    if (!P.agSkill) { P.agSkill = id; return '轻功'; }
+    if (skillPower(P.agSkill) < skillPower(id)) { P.agSkill = id; return '轻功'; }
+  }
+  return null;
+}
+// 习得武学并尝试自动运功
+function grantSkill(id) {
+  if (!P.skills.includes(id)) P.skills.push(id);
+  return autoEquip(id);
+}
+// 手动运功（武学界面）：直接装入对应系槽位，套路双槽时顶掉较弱一门
+function forceEquip(id) {
+  const sk = SKILLS[id];
+  if (!sk || id === 'basic') return null;
+  if (sk.cat === 'rt') {
+    if (!P.rtSkill) { P.rtSkill = id; return '主套路'; }
+    if (!P.rtSkill2) { P.rtSkill2 = id; return '副套路'; }
+    const weak = skillPower(P.rtSkill) <= skillPower(P.rtSkill2) ? 'rtSkill' : 'rtSkill2';
+    P[weak] = id; return SLOT_LABEL[weak];
+  }
+  const key = sk.cat === 'in' ? 'inSkill' : 'agSkill';
+  P[key] = id; return SLOT_LABEL[key];
+}
+// 升级后重估运功：招式随等级解锁，早年武学可能反超高阶新学；返回变动说明
+function reevaluateSlots() {
+  const changed = [];
+  P.skills.forEach(id => {
+    const slot = autoEquip(id);
+    if (slot) changed.push(`真气流转，你重新运功——「<b>${SKILLS[id].name}</b>」荣升${slot}之位！`);
+  });
+  return changed;
+}
+
 // —— 属性计算 ——
 function recompute() {
   const s = SECTS[P.sect], g = P.lv - 1, tf = curTitleFx(), b = P.bonus;
@@ -1074,7 +1493,29 @@ function recompute() {
   let def = s.base.def + s.grow.def * g + (b.def || 0) + (tf.def || 0);
   let spd = s.base.spd + s.grow.spd * g + (b.spd || 0) + (tf.spd || 0);
   let crt = s.base.crt + s.grow.crt * g + (b.crt || 0) + (tf.crt || 0);
-  let atkp = 0, regen = 0;
+  let atkp = 0, regen = 0, mpregen = 0, dmgred = 0, hppct = 0, dodge = 0, ls = 0, firstCrit = false;
+
+  // 装备中的武学：已参悟的被动招式生效
+  equippedSkillIds().forEach(id => {
+    SKILLS[id].moves.forEach(m => {
+      if (m.t !== 'pas' || !moveUnlocked(m) || !m.fx) return;
+      const f = m.fx;
+      if (f.atk) atk += f.atk;
+      if (f.crt) crt += f.crt;
+      if (f.def) def += f.def;
+      if (f.spd) spd += f.spd;
+      if (f.hp) hp += f.hp;
+      if (f.mp) mp += f.mp;
+      if (f.atkp) atkp += f.atkp;
+      if (f.ls) ls += f.ls;
+      if (f.regen) regen += f.regen;
+      if (f.mpregen) mpregen += f.mpregen;
+      if (f.dmgred) dmgred += f.dmgred;
+      if (f.hppct) hppct += f.hppct;
+      if (f.dodge) dodge += f.dodge;
+      if (f.firstCrit) firstCrit = true;
+    });
+  });
 
   const w = P.weapon && ITEMS[P.weapon];
   if (w) atk += w.atk + forgeAdd(w.atk, w.id);
@@ -1090,21 +1531,27 @@ function recompute() {
       case 'def': def += v; break;
       case 'crt': crt += v; break;
       case 'spd': spd += v; break;
-      case 'regen': regen = v; break;
-      case 'atkp': atkp = v; break;
+      case 'regen': regen += v; break;
+      case 'atkp': atkp += v; break;
       case 'atkspd': atk += v; spd += v; break;
       case 'spdcrt': spd += v; crt += v; break;
       case 'defspd': def += v; spd += v; break;
       case 'hpmp': hp += v * 2; mp += v; break;
     }
   }
+  if (hppct) hp *= 1 + hppct / 100;
   if (s.passive.id === 'royal') hp = Math.round(hp * 1.1);  // 大理：气血上限+10%
   if (atkp) atk = Math.round(atk * (1 + atkp / 100));
 
   P.hpMax = Math.round(hp); P.mpMax = Math.round(mp);
   P.atk = Math.round(atk); P.def = Math.round(def);
   P.spd = Math.round(spd); P.crt = Math.round(crt);
-  P.regen = regen;
+  P.regen = Math.round(Math.min(regen, 12) * 10) / 10;
+  P.mpregen = Math.round(mpregen);
+  P.dmgred = Math.round(Math.min(dmgred, 35) * 10) / 10;
+  P.dodgeBonus = Math.round(Math.min(dodge, 20) * 10) / 10;
+  P.ls = Math.round(Math.min(ls, 35) * 10) / 10;
+  P.firstCrit = firstCrit;
   P.hp = clamp(P.hp, 0, P.hpMax);
   P.mp = clamp(P.mp, 0, P.mpMax);
 }
@@ -1225,7 +1672,7 @@ function startBattle(enemyTpl, opts = {}) {
     defBuffTurns: 0, atkBuffTurns: 0, cover: false,
     enemyStun: false, dot: null,
     bf: { atk: 0, def: 0, spd: 0, nextCrit: false, dodge: false },
-    firstCrit: passiveId() === 'firstcrit',
+    firstCrit: passiveId() === 'firstcrit' || !!P.firstCrit,
     busy: false, round: 0
   };
   if (passiveId() === 'opening') {
@@ -1274,32 +1721,40 @@ function shakePanel(sel) {
 
 function renderBattleActions() {
   const box = $('#battle-actions');
-  const skills = P.skills.filter(k => P.lv >= SKILLS[k].lv);
-  const skBtns = skills.map(k => {
-    const sk = SKILLS[k];
-    const can = P.mp >= sk.mp && !(sk.hpCost && P.hp <= P.hpMax * .15);
-    return `<button class="btn ${k === 'basic' ? 'btn-primary' : ''}" data-sk="${k}" ${can ? '' : 'disabled'}>${sk.name}<small>${sk.mp ? `内力 ${sk.mp}` : '无消耗'}${sk.hits > 1 ? ' · ' + sk.hits + '连击' : ''}</small></button>`;
-  }).join('');
+  const btns = [`<button class="btn btn-primary" data-skl="basic" data-mvi="0">普通攻击<small>不耗内力 · 拳脚兵刃招呼</small></button>`];
+  [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
+    if (!id || !SKILLS[id]) return;
+    const sk = SKILLS[id];
+    sk.moves.forEach((m, i) => {
+      if (m.t !== 'act' || !moveUnlocked(m)) return;
+      const can = P.mp >= m.mp && !(m.hpCost && P.hp <= P.hpMax * .15);
+      let sub;
+      if (m.heal) {
+        sub = `回复${Math.round(m.heal * 100)}%气血${m.healMp ? '、' + Math.round(m.healMp * 100) + '%内力' : ''}`;
+      } else {
+        sub = `威力${r1(m.mult * (m.hits || 1))}倍${m.hits > 1 ? `（${m.hits}连击）` : ''}`;
+        const fx = moveFxDesc(m);
+        if (fx && fx !== '寻常招式') sub += ' · ' + fx;
+      }
+      btns.push(`<button class="btn" data-skl="${id}" data-mvi="${i}" ${can ? '' : 'disabled'}>${m.name}<small>${sk.name} · ${m.mp ? '内力' + m.mp : '无消耗'} · ${sub}</small></button>`);
+    });
+  });
   const potBtns = Object.entries(P.bag).filter(([id]) => {
     const it = ITEMS[id];
-    return it && it.cat === 'pot' && !POTIONS[it.pot].perm && !POTIONS[it.pot].full === false;
-  }).map(([id, n]) => {
-    const it = ITEMS[id], pot = POTIONS[it.pot];
-    const battleUse = !pot.perm;
-    return `<button class="btn btn-sm" data-pot="${id}" ${battleUse ? '' : 'disabled'}>${it.name} ×${n}</button>`;
-  }).join('');
+    return it && it.cat === 'pot' && !POTIONS[it.pot].perm;
+  }).map(([id, n]) => `<button class="btn btn-sm" data-pot="${id}">${ITEMS[id].name} ×${n}</button>`).join('');
   const flee = B.noFlee ? '' : `<button class="btn" data-flee="1">逃 走</button>`;
-  box.innerHTML = skBtns + potBtns + flee;
-  box.querySelectorAll('[data-sk]').forEach(b => b.addEventListener('click', () => playerSkill(b.dataset.sk)));
+  box.innerHTML = btns.join('') + potBtns + flee;
+  box.querySelectorAll('[data-skl]').forEach(b => b.addEventListener('click', () => playerMove(b.dataset.skl, +b.dataset.mvi)));
   box.querySelectorAll('[data-pot]').forEach(b => b.addEventListener('click', () => playerPotion(b.dataset.pot)));
   const f = box.querySelector('[data-flee]');
   if (f) f.addEventListener('click', playerFlee);
 }
 
-// —— 玩家伤害计算 ——
-function calcPlayerHit(sk) {
+// —— 玩家伤害计算（招式级） ——
+function calcPlayerHit(m) {
   const e = B.e;
-  if (!sk.mustHit) {
+  if (!m.mustHit) {
     const dodge = clamp(4 + (e.spd - P.spd - (B.bf.spd ? P.lv : 0)) * .8, 2, 25);
     if (Math.random() * 100 < dodge) return { miss: true };
   }
@@ -1307,45 +1762,46 @@ function calcPlayerHit(sk) {
   if (passiveId() === 'rage' && P.hp < P.hpMax * .3) atk *= 1.25;
   if (B.atkBuffTurns > 0) atk *= 1.3;
   if (B.bf.atk > 0) atk *= 1.25;
-  const hits = sk.hits || 1;
+  const hits = m.hits || 1;
   let total = 0, critAny = false;
   for (let i = 0; i < hits; i++) {
     let crit = false;
-    if (sk.mustCrit) crit = true;
+    if (m.mustCrit) crit = true;
     else if (B.firstCrit) { crit = true; B.firstCrit = false; }
     else if (B.bf.nextCrit) { crit = true; B.bf.nextCrit = false; }
-    else crit = Math.random() * 100 < (P.crt + (sk.critBonus || 0));
-    const defv = sk.ignoreDef ? 0 : e.def * .6;
-    let d = (atk * sk.mult - defv) * rf(.85, 1.15);
+    else crit = Math.random() * 100 < (P.crt + (m.critBonus || 0));
+    const defv = m.ignoreDef ? 0 : e.def * .6;
+    let d = (atk * m.mult - defv) * rf(.85, 1.15);
     if (crit) { d *= 1.8; critAny = true; }
     total += Math.max(1, Math.round(d));
   }
   return { dmg: total, crit: critAny };
 }
 
-function playerSkill(key) {
+function playerMove(key, idx) {
   if (!B || B.busy) return;
-  const sk = SKILLS[key];
-  if (P.mp < sk.mp) return;
+  const m = key === 'basic' ? { name: '普通攻击', t: 'act', mult: 1, mp: 0 } : SKILLS[key].moves[idx];
+  if (!m) return;
+  if (P.mp < m.mp) return;
   B.busy = true;
   Sfx.ensure();
-  P.mp -= sk.mp;
-  if (sk.hpCost) {
-    const cost = Math.max(1, Math.round(P.hpMax * sk.hpCost));
+  P.mp -= m.mp;
+  if (m.hpCost) {
+    const cost = Math.max(1, Math.round(P.hpMax * m.hpCost));
     P.hp = Math.max(1, P.hp - cost);
     blog(`你强催真气，燃烧自身气血 ${cost} 点！`, 'bad');
   }
-  if (sk.heal) {
-    const h = Math.round(P.hpMax * sk.heal), m = Math.round(P.mpMax * (sk.healMp || 0));
-    P.hp = clamp(P.hp + h, 0, P.hpMax); P.mp = clamp(P.mp + m, 0, P.mpMax);
+  if (m.heal) {
+    const h = Math.round(P.hpMax * m.heal), mm = Math.round(P.mpMax * (m.healMp || 0));
+    P.hp = clamp(P.hp + h, 0, P.hpMax); P.mp = clamp(P.mp + mm, 0, P.mpMax);
     Sfx.heal();
-    blog(`你运转「${sk.name}」，真气流转周天——气血 +${h}，内力 +${m}！`, 'good');
+    blog(`你运转「<b>${m.name}</b>」，真气流转周天——气血 +${h}，内力 +${mm}！`, 'good');
     floatDmg('player', '+' + h, 'heal');
     renderBattle();
     return setTimeout(companionTurn, 650);
   }
-  blog(`你使出「<b>${sk.name}</b>」！`);
-  const r = calcPlayerHit(sk);
+  blog(`你使出「<b>${m.name}</b>」！`);
+  const r = calcPlayerHit(m);
   if (r.miss) {
     Sfx.miss();
     blog(`${B.e.name}身形一晃，堪堪避过！`, 'bad');
@@ -1353,30 +1809,32 @@ function playerSkill(key) {
   } else {
     B.e.hp = Math.max(0, B.e.hp - r.dmg);
     if (r.crit) Sfx.crit(); else Sfx.hit();
-    blog(`击中${B.e.name}，造成 <b>${r.dmg}</b> 点伤害${r.crit ? '（会心一击！）' : ''}${sk.hits > 1 ? `（${sk.hits}连击）` : ''}！`, r.crit ? 'good' : '');
+    blog(`击中${B.e.name}，造成 <b>${r.dmg}</b> 点伤害${r.crit ? '（会心一击！）' : ''}${m.hits > 1 ? `（${m.hits}连击）` : ''}！`, r.crit ? 'good' : '');
     floatDmg('enemy', '-' + r.dmg, r.crit ? 'crit' : '');
     shakePanel('#battle-stage');
-    if (sk.lifesteal && r.dmg > 0) {
-      const h = Math.round(r.dmg * sk.lifesteal);
+    // 吸血：武学被动（百分比）+ 招式自带（小数）
+    const lsPct = (P.ls || 0) + (m.lifesteal || 0) * 100;
+    if (lsPct > 0 && r.dmg > 0) {
+      const h = Math.round(r.dmg * lsPct / 100);
       P.hp = clamp(P.hp + h, 0, P.hpMax);
       blog(`真气牵引，你吸取敌人体力，气血 +${h}。`, 'good');
       floatDmg('player', '+' + h, 'heal');
     }
-    if (sk.mpDrain && r.dmg > 0) {
-      P.mp = clamp(P.mp + sk.mpDrain, 0, P.mpMax);
-      blog(`吞纳真气，你的内力 +${sk.mpDrain}。`, 'good');
+    if (m.mpDrain && r.dmg > 0) {
+      P.mp = clamp(P.mp + m.mpDrain, 0, P.mpMax);
+      blog(`吞纳真气，你的内力 +${m.mpDrain}。`, 'good');
     }
-    if (sk.dot && B.e.hp > 0) {
-      B.dot = { dmg: Math.max(2, Math.round(P.atk * sk.dot)), turns: 3 };
+    if (m.dot && B.e.hp > 0) {
+      B.dot = { dmg: Math.max(2, Math.round(P.atk * m.dot)), turns: 3 };
       blog(`${B.e.name}中了阴毒，气血将源源流逝！`, 'good');
     }
-    if (sk.stun && B.e.hp > 0 && Math.random() < sk.stun) {
+    if (m.stun && B.e.hp > 0 && Math.random() < m.stun) {
       B.enemyStun = true;
       blog(`${B.e.name}被震得气血翻涌，动弹不得！`, 'good');
     }
   }
-  if (sk.defBuff) B.defBuffTurns = sk.defBuff;
-  if (sk.atkBuff) B.atkBuffTurns = sk.atkBuff;
+  if (m.defBuff) B.defBuffTurns = m.defBuff;
+  if (m.atkBuff) B.atkBuffTurns = m.atkBuff;
   renderBattle();
   if (B.e.hp <= 0) return setTimeout(victory, 650);
   setTimeout(companionTurn, 800);
@@ -1500,7 +1958,7 @@ function enemyTurn() {
   if (!B) return;
   const e = B.e;
   // 被动恢复
-  const regen = 3 + (passiveId() === 'regen' ? 4 : 0);
+  const regen = 3 + (P.mpregen || 0) + (passiveId() === 'regen' ? 4 : 0);
   P.mp = clamp(P.mp + regen, 0, P.mpMax);
   if (passiveId() === 'regenhp') P.hp = clamp(P.hp + Math.round(P.hpMax * .03), 0, P.hpMax);
   if (P.regen) P.hp = clamp(P.hp + Math.round(P.hpMax * P.regen / 100), 0, P.hpMax);
@@ -1535,6 +1993,7 @@ function enemyTurn() {
   // 攻击玩家
   let dodge = clamp(4 + (P.spd + (B.bf.spd ? P.lv : 0) - e.spd) * .8, 3, 30);
   if (passiveId() === 'dodge') dodge += 8;
+  dodge += (P.dodgeBonus || 0);
   if (B.bf.dodge || Math.random() * 100 < dodge) {
     B.bf.dodge = false;
     Sfx.miss();
@@ -1544,6 +2003,7 @@ function enemyTurn() {
   }
   let d = (e.atk * mult - P.def * .6) * rf(.85, 1.15);
   if (passiveId() === 'iron') d *= .9;
+  d *= 1 - (P.dmgred || 0) / 100;
   if (B.defBuffTurns > 0) d *= .5;
   if (B.bf.def > 0) d *= .5;
   if (B.cover) d *= .6;
@@ -1655,7 +2115,10 @@ function victory() {
     const rewards = [];
     if (rw.silver) { P.silver += rw.silver; rewards.push(`银两 ${rw.silver}`); }
     if (rw.item) { addItem(rw.item); rewards.push(`「${ITEMS[rw.item].name}」`); }
-    if (rw.skill && !P.skills.includes(rw.skill)) { P.skills.push(rw.skill); rewards.push(`绝学「${SKILLS[rw.skill].name}」`); }
+    if (rw.skill && !P.skills.includes(rw.skill)) {
+      const slot = grantSkill(rw.skill);
+      rewards.push(`绝学「${SKILLS[rw.skill].name}」${slot ? '（运功·' + slot + '）' : ''}`);
+    }
     if (rw.potions) Object.entries(rw.potions).forEach(([k, n]) => { addItem('pot_' + k, n); rewards.push(`${POTIONS[k].name} ×${n}`); });
     if (rw.sp) { addItem('sp_' + rw.sp); rewards.push(`「${SPECIALS[rw.sp].name}」`); }
     if (rewards.length) extra += `<div class="divider"></div><p><b>缴获：</b>${rewards.join('、')}</p>`;
@@ -2072,25 +2535,28 @@ function renderHome() {
   $('#loc-sub').textContent = `${reg.name} · 建议等级 ${map.lv}`;
   $('#loc-desc').textContent = pick(REGION_FLAVOR[map.region]);
 
+  // 头目按钮：#btn-boss 常驻（主线），支线按钮动态插拔，避免锚点丢失
   const bb = $('#btn-boss');
+  const oldSide = $('#btn-side-boss');
+  if (oldSide) oldSide.remove();
   const chapter = CHAPTERS[flags.ch - 1];
-  let bossBtns = '';
-  if (chapter && chapter.map === map.id && chapter.boss && !flags.bossBeaten[chapter.boss]) {
-    const boss = BOSSES[chapter.boss];
-    const ok = P.lv >= boss.lv - 3;
-    bossBtns = `<button class="btn btn-primary" id="btn-chapter-boss" ${ok ? '' : 'disabled'}>挑战 · ${boss.name}</button>`;
+  let chBoss = null;
+  if (chapter && chapter.map === map.id && chapter.boss && !flags.bossBeaten[chapter.boss]) chBoss = BOSSES[chapter.boss];
+  if (chBoss) {
+    bb.style.display = '';
+    bb.disabled = P.lv < chBoss.lv - 3;
+    bb.textContent = '挑战 · ' + chBoss.name;
+    bb.title = '主线头目，誓死一战，不可逃走！';
+    bb.onclick = () => challengeBoss(chBoss.id);
+  } else {
+    bb.style.display = 'none';
   }
   if (map.bossSide && !flags.bossBeaten[map.bossSide]) {
     const sb = BOSSES[map.bossSide];
-    const ok = P.lv >= sb.lv - 4;
-    bossBtns += `<button class="btn" id="btn-side-boss" ${ok ? '' : 'disabled'}>支线 · ${sb.name}</button>`;
-  }
-  bb.outerHTML = bossBtns || '<button class="btn btn-primary" id="btn-boss" style="display:none"></button>';
-  if (bossBtns) {
-    const cb = $('#btn-chapter-boss');
-    if (cb) { cb.title = '主线头目，誓死一战，不可逃走！'; cb.onclick = () => challengeBoss(CHAPTERS[flags.ch - 1].boss, true); }
+    bb.insertAdjacentHTML('afterend', `<button class="btn" id="btn-side-boss" ${P.lv >= sb.lv - 4 ? '' : 'disabled'}>支线 · ${sb.name}</button>`);
     const sbt = $('#btn-side-boss');
-    if (sbt) { sbt.title = '支线头目，可获珍稀奖励。'; sbt.onclick = () => challengeBoss(map.bossSide, false); }
+    sbt.title = '支线头目，可获珍稀奖励。';
+    sbt.onclick = () => challengeBoss(map.bossSide);
   }
 
   $('#quest-box').innerHTML = `<b style="color:var(--red)">${chapter.text.split('】')[0]}】</b>${chapter.text.split('】')[1] || ''}`;
@@ -2381,38 +2847,122 @@ function openBag() {
   $('#modal-root').querySelectorAll('[data-read]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.read, it = ITEMS[id];
     removeItem(id);
-    P.skills.push(it.bookSkill);
+    const slot = grantSkill(it.bookSkill);
+    recompute();
     Sfx.levelup();
     log(`你参悟了「${SKILLS[it.bookSkill].name}」！`, 'good');
     save();
     closeModal();
-    modal('武学精进', `<p>你挑灯夜读，豁然贯通——习得「<b>${SKILLS[it.bookSkill].name}</b>」！</p><p class="muted">${SKILLS[it.bookSkill].desc}</p>`,
+    modal('武学精进', `<p>你挑灯夜读，豁然贯通——习得「<b>${SKILLS[it.bookSkill].name}</b>」！</p>
+      <p class="muted">${SKILLS[it.bookSkill].desc}</p>
+      ${slot ? `<p>真气自行流转，此功已运于<b style="color:var(--jade)">${slot}</b>之位。</p>` : ''}`,
       [{ label: '好哉', primary: true, fn: () => openBag() }]);
   }));
 }
 
+// ---------- 人物属性 ----------
+function openStats() {
+  const s = SECTS[P.sect];
+  const stat = (label, val, sub) => `<div class="stat-cell"><span>${label}</span><b>${val}</b>${sub ? `<em>${sub}</em>` : ''}</div>`;
+  const gear = [
+    ['兵刃', P.weapon], ['护甲', P.armor], ['饰品', P.acc]
+  ].map(([k, id]) => `<div class="stat-cell"><span>${k}</span><b class="small">${id ? esc(ITEMS[id].name) + (forgeStar(id) ? ' +' + forgeStar(id) : '') : '无'}</b></div>`).join('');
+  const slots = [
+    ['主套路', P.rtSkill], ['副套路', P.rtSkill2], ['内功', P.inSkill], ['轻功', P.agSkill]
+  ].map(([k, id]) => `<div class="stat-cell"><span>${k}</span><b class="small">${id ? esc(SKILLS[id].name) : '——'}</b><em>${id ? CAT_NAME[SKILLS[id].cat] + ' · ' + SKILLS[id].lv + '级' : '待运功'}</em></div>`).join('');
+  const fx = [];
+  if (P.ls) fx.push(`攻击吸血 ${P.ls}%`);
+  if (P.dmgred) fx.push(`受到伤害 -${P.dmgred}%`);
+  if (P.dodgeBonus) fx.push(`闪避 +${P.dodgeBonus}%`);
+  if (P.regen) fx.push(`每回合回复 ${P.regen}% 气血`);
+  if (P.mpregen) fx.push(`每回合回复内力 +${P.mpregen}`);
+  if (P.firstCrit) fx.push('每战首击必定会心');
+  modal(`人物 · ${esc(P.name)}`,
+    `<p class="muted" style="margin-bottom:6px">${s.name}（${s.tag}）· ${P.lv} 级${P.title ? ' · 「' + TITLES[P.title].name + '」' : ''}　心法：${s.passive.text}</p>
+     <div class="divider"></div><p><b>根骨属性</b></p>
+     <div class="stat-grid">
+       ${stat('气血上限', P.hpMax, P.regen ? '每回合+' + P.regen + '%' : '')}
+       ${stat('内力上限', P.mpMax, P.mpregen ? '每回合+' + P.mpregen : '')}
+       ${stat('攻 击', P.atk)}${stat('防 御', P.def)}
+       ${stat('身 法', P.spd, '闪避+' + P.dodgeBonus + '%')}${stat('暴 击', P.crt + '%', P.firstCrit ? '首击必暴' : '')}
+     </div>
+     ${fx.length ? `<p style="margin-top:8px"><b>奇特效性</b></p><p class="fx-line">${fx.join('　·　')}</p>` : ''}
+     <div class="divider"></div><p><b>武学运功</b> <span class="muted">（已参悟的被动招式增益，均已计入上述属性）</span></p>
+     <div class="stat-grid">${slots}</div>
+     <p style="margin-top:8px"><b>随身装备</b></p>
+     <div class="stat-grid">${gear}</div>
+     <div class="divider"></div><p><b>江湖履历</b></p>
+     <p style="font-size:13.5px;line-height:2">败敌 ${P.kills} 人 · 斩头目 ${P.bossKills} 员 · 比武夺冠 ${P.tourWins} 次 · 缉悬赏 ${flags.bountyCount} 张<br>
+     已习武学 ${P.skills.length - 1} 门 · 锻造神兵 ${P.forgeSucc} 次 · 身怀 <span class="gold">${P.silver}</span> 两 · 获名号 ${P.titles.length} 个</p>`,
+    [{ label: '关闭', fn: null }, { label: '侠影犹在', primary: true }]);
+}
+
 // ---------- 武学 ----------
+function moveRow(m) {
+  const un = moveUnlocked(m);
+  const tag = m.t === 'act' ? '<span class="mtag act">主动</span>' : '<span class="mtag pas">被动</span>';
+  let d;
+  if (m.t === 'pas') d = moveFxDesc(m);
+  else if (m.heal) d = `回复${Math.round(m.heal * 100)}%气血${m.healMp ? `、${Math.round(m.healMp * 100)}%内力` : ''}`;
+  else {
+    d = `威力 ${r1(m.mult * (m.hits || 1))} 倍${m.hits > 1 ? `（${m.hits}连击）` : ''}`;
+    const fx = moveFxDesc(m);
+    if (fx && fx !== '寻常招式') d += ' · ' + fx;
+  }
+  return `<div class="move-row${un ? '' : ' locked'}"><span class="mno">${MV_NAME[m.mv - 1]}</span>${tag}<b>${esc(m.name)}</b><span class="mfx">${d}${un ? '' : `　<span class="red">${m.unlock}级参悟</span>`}</span></div>`;
+}
+
 function openSkills() {
   const s = SECTS[P.sect];
   const sectSkillIds = s.skills.map((d, i) => P.sect + '_s' + i);
-  const mine = P.skills.filter(k => k !== 'basic').map(k => {
-    const sk = SKILLS[k], can = P.lv >= sk.lv;
+  const equipped = equippedSkillIds();
+
+  const slotRow = (label, id) => {
+    if (!id) return `<div class="list-row"><div class="grow"><b class="muted">${label} · 空</b><small>习得${label === '主套路' || label === '副套路' ? '套路' : label}武学后自动运功于此</small></div></div>`;
+    const sk = SKILLS[id];
+    return `<div class="list-row equipped">
+      <div class="grow"><b>${esc(sk.name)}</b> <span class="tag">${label} · ${CAT_NAME[sk.cat]}</span>
+        <small>${sk.desc}</small>
+        <div style="margin-top:5px">${sk.moves.map(moveRow).join('')}</div></div>
+    </div>`;
+  };
+
+  const catRows = cat => P.skills.filter(k => k !== 'basic' && SKILLS[k].cat === cat).map(k => {
+    const sk = SKILLS[k];
+    const worn = equipped.includes(k);
+    const canWear = P.lv >= sk.lv;
     return `<div class="list-row">
-      <div class="grow"><b>${sk.name}</b> ${can ? '<span class="tag">可施展</span>' : `<span class="tag">${sk.lv}级解锁</span>`}
-        <small>${sk.desc} · ${sk.mp ? `耗内力 ${sk.mp}` : '无消耗'}${sk.mult ? ` · 威力 ${(sk.mult * (sk.hits || 1)).toFixed(2)}倍` : ''}</small></div>
+      <div class="grow"><b>${esc(sk.name)}</b> <span class="tag">${CAT_NAME[cat]}</span>
+        <small>${sk.desc} · ${sk.lv}级武学${canWear ? '' : '（' + sk.lv + '级方可参悟）'}</small></div>
+      ${worn ? '<span class="tag jade">运功中</span>' : (canWear ? `<button class="btn btn-sm btn-primary" data-wear="${k}">运功</button>` : '<span class="tag">未参悟</span>')}
     </div>`;
   }).join('');
+
   const future = sectSkillIds.filter(k => !P.skills.includes(k)).map(k =>
-    `<div class="list-row"><div class="grow"><b>${SKILLS[k].name}</b><small>${SKILLS[k].lv} 级时由师父传授 · ${SKILLS[k].desc}</small></div></div>`).join('');
+    `<div class="list-row"><div class="grow"><b>${esc(SKILLS[k].name)}</b> <span class="tag">${CAT_NAME[SKILLS[k].cat]}</span><small>${SKILLS[k].lv} 级时由师父传授 · ${SKILLS[k].desc}</small></div></div>`).join('');
   const hiddenCount = Object.keys(HIDDEN_SKILLS).filter(k => !P.skills.includes(k)).length;
   const hiddenRows = hiddenCount
     ? `<div class="divider"></div><p><b>隐世武学</b></p><div class="list-row"><div class="grow"><b>？？？？</b><small>江湖五十五处，藏着 ${hiddenCount} 部无人知晓的绝学……游历四方，机缘自现。</small></div></div>`
     : '';
+
   modal(`武学 · ${s.name}`,
-    `<p class="muted" style="margin-bottom:6px">门派心法：<b>${s.passive.text}</b>　已习得 ${P.skills.length - 1} 门武学。</p>
-     <div class="divider"></div><p><b>已习得</b></p>${mine}
+    `<p class="muted" style="margin-bottom:6px">门派心法：<b>${s.passive.text}</b>　已习得 ${P.skills.length - 1} 门 · 每门武学五式招法，主动招式战斗中施展，被动招式运功即生效。</p>
+     <div class="divider"></div><p><b>运功之中</b></p>
+     ${slotRow('主套路', P.rtSkill)}${slotRow('副套路', P.rtSkill2)}${slotRow('内功', P.inSkill)}${slotRow('轻功', P.agSkill)}
+     <div class="divider"></div><p><b>套路武学</b> <span class="muted">（攻伐招式为主，可运功两门）</span></p>${catRows('rt') || '<p class="muted">尚无。</p>'}
+     <div class="divider"></div><p><b>内功武学</b> <span class="muted">（被动增益为主，附疗伤/吸星之法）</span></p>${catRows('in') || '<p class="muted">尚无。</p>'}
+     <div class="divider"></div><p><b>轻功武学</b> <span class="muted">（身法闪避为主，附凌空迅击）</span></p>${catRows('ag') || '<p class="muted">尚无。</p>'}
      ${future ? `<div class="divider"></div><p><b>门派深造</b></p>${future}` : ''}${hiddenRows}`,
-    [{ label: '关闭', fn: null }, { label: '悟已往之不谏', primary: true }]);
+    [{ label: '关闭', fn: null }, { label: '招式在心', primary: true }]);
+
+  $('#modal-root').querySelectorAll('[data-wear]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.wear, sk = SKILLS[id];
+    const slot = forceEquip(id);
+    recompute(); save();
+    Sfx.click();
+    toast(`「${sk.name}」已运于${slot}之位。`);
+    closeModal(); renderStatus(); openSkills();
+  }));
 }
 
 // ---------- 江湖舆图 ----------
@@ -2451,7 +3001,7 @@ function about() {
     `<p>一款致敬金庸、古龙武侠世界的回合制 RPG，纯前端单文件，无需安装。</p>
      <div class="divider"></div>
      <p><b>十大门派</b>：各有 15 阶门派武学与独门被动心法。</p>
-     <p><b>二百余门武学</b>：门派 150 · 江湖秘籍 20 · 隐世绝学 30。</p>
+     <p><b>二百余门武学</b>：分套路 · 内功 · 轻功三系，每门五式招法，主动被动相辅——门派 150 · 江湖秘籍 20 · 隐世绝学 32，共千余式招法。</p>
      <p><b>三百余件物品</b>：兵刃 84 · 护甲 40 · 饰品 36 · 丹药 24 · 材料 40 · 珍宝 50 · 秘籍 20 · 奇物 18。</p>
      <p><b>五十五处江湖</b>：八大地域，十章主线，十八头目。</p>
      <p><b>伙伴同行</b>：十六位江湖豪杰可招入麾下，至多两人随行出战。</p>
@@ -2470,12 +3020,16 @@ function newGame() {
     silver: 120,
     bag: { pot_jinchuang: 3, pot_neixi: 2 },
     weapon: null, armor: null, acc: null, forge: {},
-    skills: ['basic', selectedSect + '_s0'],
+    skills: ['basic'],
+    rtSkill: null, rtSkill2: null, inSkill: null, agSkill: null,
     bonus: { hp: 0, mp: 0, atk: 0, def: 0, spd: 0, crt: 0 },
     comps: [], compActive: [],
     titles: ['newbie'], title: 'newbie',
     kills: 0, bossKills: 0, tourWins: 0, forgeSucc: 0
   };
+  recompute();
+  P.hp = P.hpMax; P.mp = P.mpMax;
+  grantSkill(selectedSect + '_s0');
   recompute();
   P.hp = P.hpMax; P.mp = P.mpMax;
   flags = {
@@ -2511,12 +3065,15 @@ function gainExp(n) {
     SECTS[P.sect].skills.forEach((def, i) => {
       const id = P.sect + '_s' + i;
       if (P.lv >= SKILLS[id].lv && !P.skills.includes(id)) {
-        P.skills.push(id);
-        ups.push(`师父传授门派绝学「<b>${SKILLS[id].name}</b>」！`);
+        const slot = grantSkill(id);
+        ups.push(`师父传授门派绝学「<b>${SKILLS[id].name}</b>」${slot ? '，已运功于' + slot : ''}！`);
       }
     });
+    reevaluateSlots().forEach(t => ups.push(t));
   }
   if (ups.length) {
+    recompute();
+    P.hp = P.hpMax; P.mp = P.mpMax;
     Sfx.levelup();
     log(ups[0].replace(/<[^>]+>/g, ''), 'good');
     modal('武学精进', ups.map(u => `<p>🎉 ${u}</p>`).join(''));
@@ -2535,7 +3092,11 @@ function explore() {
     const ev = pick(avail);
     flags.doneEvents[ev.id] = true;
     let gains = [];
-    if (ev.skill) { P.skills.push(ev.skill); gains.push(`习得绝学「<b>${SKILLS[ev.skill].name}</b>」！`); }
+    if (ev.skill) {
+      const slot = grantSkill(ev.skill);
+      recompute();
+      gains.push(`习得绝学「<b>${SKILLS[ev.skill].name}</b>」${slot ? '，真气自行运于' + slot : ''}！`);
+    }
     if (ev.bonus) {
       Object.entries(ev.bonus).forEach(([k, v]) => { P.bonus[k] = (P.bonus[k] || 0) + v; });
       recompute();
@@ -2642,6 +3203,10 @@ function restoreSave(d) {
   P.comps = P.comps || []; P.compActive = P.compActive || [];
   P.titles = P.titles || ['newbie'];
   if (!P.titles.includes('newbie')) P.titles.push('newbie');
+  // 旧档迁移：补齐武学运功槽
+  if (!P.rtSkill && !P.rtSkill2 && !P.inSkill && !P.agSkill) {
+    P.skills.slice().forEach(id => autoEquip(id));
+  }
   curMap = flags.loc || 'niujiacun';
   if (!MAPS.find(m => m.id === curMap)) curMap = 'niujiacun';
   Sfx.muted = !!flags.muted;
@@ -2690,6 +3255,7 @@ function init() {
   $('#btn-shop').addEventListener('click', openShop);
   $('#btn-bag').addEventListener('click', openBag);
   $('#btn-skills').addEventListener('click', openSkills);
+  $('#btn-stats').addEventListener('click', openStats);
 }
 init();
 </script>

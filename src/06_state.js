@@ -44,6 +44,79 @@ function forgeAdd(base, id) {
   return s ? Math.max(1, Math.round(base * s * .08)) : 0;
 }
 
+// —— 武学装备槽 ——
+// 套路两门（主/副，提供主动招式），内功、轻功各一门（以被动招式增益为主）
+function equippedSkillIds() {
+  return [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].filter(id => id && SKILLS[id]);
+}
+function moveUnlocked(m) { return P.lv >= m.unlock; }
+
+const SLOT_KEYS = { rt: ['rtSkill', 'rtSkill2'], in: ['inSkill'], ag: ['agSkill'] };
+const SLOT_LABEL = { rtSkill: '主套路', rtSkill2: '副套路', inSkill: '内功', agSkill: '轻功' };
+
+// 武学当前战力评估：套路取已解锁的最强主动招，内功/轻功按招式参悟进度折算
+// （如此，早年武学五式大成之前，不会被刚入门的高阶新武学轻易顶替）
+function skillPower(id) {
+  const sk = SKILLS[id];
+  if (!sk) return 0;
+  if (sk.cat === 'rt') {
+    let best = 0;
+    sk.moves.forEach(m => {
+      if (m.t === 'act' && m.mult > 0 && moveUnlocked(m)) best = Math.max(best, m.mult * (m.hits || 1));
+    });
+    return best || sk.mult * .8;
+  }
+  const un = sk.moves.filter(moveUnlocked).length;
+  return Math.round(sk.mult * (.35 + .65 * un / 5) * 100) / 100;
+}
+
+// 自动运功：空槽直接装，否则替换同系较弱的一门；返回装入的槽位名（未装返回 null）
+function autoEquip(id) {
+  const sk = SKILLS[id];
+  if (!sk || id === 'basic') return null;
+  if ([P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].includes(id)) return null;
+  if (sk.cat === 'rt') {
+    if (!P.rtSkill) { P.rtSkill = id; return '主套路'; }
+    if (!P.rtSkill2) { P.rtSkill2 = id; return '副套路'; }
+    const weak = skillPower(P.rtSkill) <= skillPower(P.rtSkill2) ? 'rtSkill' : 'rtSkill2';
+    if (skillPower(P[weak]) < skillPower(id)) { P[weak] = id; return SLOT_LABEL[weak]; }
+  } else if (sk.cat === 'in') {
+    if (!P.inSkill) { P.inSkill = id; return '内功'; }
+    if (skillPower(P.inSkill) < skillPower(id)) { P.inSkill = id; return '内功'; }
+  } else {
+    if (!P.agSkill) { P.agSkill = id; return '轻功'; }
+    if (skillPower(P.agSkill) < skillPower(id)) { P.agSkill = id; return '轻功'; }
+  }
+  return null;
+}
+// 习得武学并尝试自动运功
+function grantSkill(id) {
+  if (!P.skills.includes(id)) P.skills.push(id);
+  return autoEquip(id);
+}
+// 手动运功（武学界面）：直接装入对应系槽位，套路双槽时顶掉较弱一门
+function forceEquip(id) {
+  const sk = SKILLS[id];
+  if (!sk || id === 'basic') return null;
+  if (sk.cat === 'rt') {
+    if (!P.rtSkill) { P.rtSkill = id; return '主套路'; }
+    if (!P.rtSkill2) { P.rtSkill2 = id; return '副套路'; }
+    const weak = skillPower(P.rtSkill) <= skillPower(P.rtSkill2) ? 'rtSkill' : 'rtSkill2';
+    P[weak] = id; return SLOT_LABEL[weak];
+  }
+  const key = sk.cat === 'in' ? 'inSkill' : 'agSkill';
+  P[key] = id; return SLOT_LABEL[key];
+}
+// 升级后重估运功：招式随等级解锁，早年武学可能反超高阶新学；返回变动说明
+function reevaluateSlots() {
+  const changed = [];
+  P.skills.forEach(id => {
+    const slot = autoEquip(id);
+    if (slot) changed.push(`真气流转，你重新运功——「<b>${SKILLS[id].name}</b>」荣升${slot}之位！`);
+  });
+  return changed;
+}
+
 // —— 属性计算 ——
 function recompute() {
   const s = SECTS[P.sect], g = P.lv - 1, tf = curTitleFx(), b = P.bonus;
@@ -53,7 +126,29 @@ function recompute() {
   let def = s.base.def + s.grow.def * g + (b.def || 0) + (tf.def || 0);
   let spd = s.base.spd + s.grow.spd * g + (b.spd || 0) + (tf.spd || 0);
   let crt = s.base.crt + s.grow.crt * g + (b.crt || 0) + (tf.crt || 0);
-  let atkp = 0, regen = 0;
+  let atkp = 0, regen = 0, mpregen = 0, dmgred = 0, hppct = 0, dodge = 0, ls = 0, firstCrit = false;
+
+  // 装备中的武学：已参悟的被动招式生效
+  equippedSkillIds().forEach(id => {
+    SKILLS[id].moves.forEach(m => {
+      if (m.t !== 'pas' || !moveUnlocked(m) || !m.fx) return;
+      const f = m.fx;
+      if (f.atk) atk += f.atk;
+      if (f.crt) crt += f.crt;
+      if (f.def) def += f.def;
+      if (f.spd) spd += f.spd;
+      if (f.hp) hp += f.hp;
+      if (f.mp) mp += f.mp;
+      if (f.atkp) atkp += f.atkp;
+      if (f.ls) ls += f.ls;
+      if (f.regen) regen += f.regen;
+      if (f.mpregen) mpregen += f.mpregen;
+      if (f.dmgred) dmgred += f.dmgred;
+      if (f.hppct) hppct += f.hppct;
+      if (f.dodge) dodge += f.dodge;
+      if (f.firstCrit) firstCrit = true;
+    });
+  });
 
   const w = P.weapon && ITEMS[P.weapon];
   if (w) atk += w.atk + forgeAdd(w.atk, w.id);
@@ -69,21 +164,27 @@ function recompute() {
       case 'def': def += v; break;
       case 'crt': crt += v; break;
       case 'spd': spd += v; break;
-      case 'regen': regen = v; break;
-      case 'atkp': atkp = v; break;
+      case 'regen': regen += v; break;
+      case 'atkp': atkp += v; break;
       case 'atkspd': atk += v; spd += v; break;
       case 'spdcrt': spd += v; crt += v; break;
       case 'defspd': def += v; spd += v; break;
       case 'hpmp': hp += v * 2; mp += v; break;
     }
   }
+  if (hppct) hp *= 1 + hppct / 100;
   if (s.passive.id === 'royal') hp = Math.round(hp * 1.1);  // 大理：气血上限+10%
   if (atkp) atk = Math.round(atk * (1 + atkp / 100));
 
   P.hpMax = Math.round(hp); P.mpMax = Math.round(mp);
   P.atk = Math.round(atk); P.def = Math.round(def);
   P.spd = Math.round(spd); P.crt = Math.round(crt);
-  P.regen = regen;
+  P.regen = Math.round(Math.min(regen, 12) * 10) / 10;
+  P.mpregen = Math.round(mpregen);
+  P.dmgred = Math.round(Math.min(dmgred, 35) * 10) / 10;
+  P.dodgeBonus = Math.round(Math.min(dodge, 20) * 10) / 10;
+  P.ls = Math.round(Math.min(ls, 35) * 10) / 10;
+  P.firstCrit = firstCrit;
   P.hp = clamp(P.hp, 0, P.hpMax);
   P.mp = clamp(P.mp, 0, P.mpMax);
 }

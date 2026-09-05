@@ -8,12 +8,16 @@ function newGame() {
     silver: 120,
     bag: { pot_jinchuang: 3, pot_neixi: 2 },
     weapon: null, armor: null, acc: null, forge: {},
-    skills: ['basic', selectedSect + '_s0'],
+    skills: ['basic'],
+    rtSkill: null, rtSkill2: null, inSkill: null, agSkill: null,
     bonus: { hp: 0, mp: 0, atk: 0, def: 0, spd: 0, crt: 0 },
     comps: [], compActive: [],
     titles: ['newbie'], title: 'newbie',
     kills: 0, bossKills: 0, tourWins: 0, forgeSucc: 0
   };
+  recompute();
+  P.hp = P.hpMax; P.mp = P.mpMax;
+  grantSkill(selectedSect + '_s0');
   recompute();
   P.hp = P.hpMax; P.mp = P.mpMax;
   flags = {
@@ -49,12 +53,15 @@ function gainExp(n) {
     SECTS[P.sect].skills.forEach((def, i) => {
       const id = P.sect + '_s' + i;
       if (P.lv >= SKILLS[id].lv && !P.skills.includes(id)) {
-        P.skills.push(id);
-        ups.push(`师父传授门派绝学「<b>${SKILLS[id].name}</b>」！`);
+        const slot = grantSkill(id);
+        ups.push(`师父传授门派绝学「<b>${SKILLS[id].name}</b>」${slot ? '，已运功于' + slot : ''}！`);
       }
     });
+    reevaluateSlots().forEach(t => ups.push(t));
   }
   if (ups.length) {
+    recompute();
+    P.hp = P.hpMax; P.mp = P.mpMax;
     Sfx.levelup();
     log(ups[0].replace(/<[^>]+>/g, ''), 'good');
     modal('武学精进', ups.map(u => `<p>🎉 ${u}</p>`).join(''));
@@ -73,7 +80,11 @@ function explore() {
     const ev = pick(avail);
     flags.doneEvents[ev.id] = true;
     let gains = [];
-    if (ev.skill) { P.skills.push(ev.skill); gains.push(`习得绝学「<b>${SKILLS[ev.skill].name}</b>」！`); }
+    if (ev.skill) {
+      const slot = grantSkill(ev.skill);
+      recompute();
+      gains.push(`习得绝学「<b>${SKILLS[ev.skill].name}</b>」${slot ? '，真气自行运于' + slot : ''}！`);
+    }
     if (ev.bonus) {
       Object.entries(ev.bonus).forEach(([k, v]) => { P.bonus[k] = (P.bonus[k] || 0) + v; });
       recompute();
@@ -180,6 +191,10 @@ function restoreSave(d) {
   P.comps = P.comps || []; P.compActive = P.compActive || [];
   P.titles = P.titles || ['newbie'];
   if (!P.titles.includes('newbie')) P.titles.push('newbie');
+  // 旧档迁移：补齐武学运功槽
+  if (!P.rtSkill && !P.rtSkill2 && !P.inSkill && !P.agSkill) {
+    P.skills.slice().forEach(id => autoEquip(id));
+  }
   curMap = flags.loc || 'niujiacun';
   if (!MAPS.find(m => m.id === curMap)) curMap = 'niujiacun';
   Sfx.muted = !!flags.muted;
@@ -228,5 +243,6 @@ function init() {
   $('#btn-shop').addEventListener('click', openShop);
   $('#btn-bag').addEventListener('click', openBag);
   $('#btn-skills').addEventListener('click', openSkills);
+  $('#btn-stats').addEventListener('click', openStats);
 }
 init();

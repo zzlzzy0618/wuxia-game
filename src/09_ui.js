@@ -84,25 +84,28 @@ function renderHome() {
   $('#loc-sub').textContent = `${reg.name} · 建议等级 ${map.lv}`;
   $('#loc-desc').textContent = pick(REGION_FLAVOR[map.region]);
 
+  // 头目按钮：#btn-boss 常驻（主线），支线按钮动态插拔，避免锚点丢失
   const bb = $('#btn-boss');
+  const oldSide = $('#btn-side-boss');
+  if (oldSide) oldSide.remove();
   const chapter = CHAPTERS[flags.ch - 1];
-  let bossBtns = '';
-  if (chapter && chapter.map === map.id && chapter.boss && !flags.bossBeaten[chapter.boss]) {
-    const boss = BOSSES[chapter.boss];
-    const ok = P.lv >= boss.lv - 3;
-    bossBtns = `<button class="btn btn-primary" id="btn-chapter-boss" ${ok ? '' : 'disabled'}>挑战 · ${boss.name}</button>`;
+  let chBoss = null;
+  if (chapter && chapter.map === map.id && chapter.boss && !flags.bossBeaten[chapter.boss]) chBoss = BOSSES[chapter.boss];
+  if (chBoss) {
+    bb.style.display = '';
+    bb.disabled = P.lv < chBoss.lv - 3;
+    bb.textContent = '挑战 · ' + chBoss.name;
+    bb.title = '主线头目，誓死一战，不可逃走！';
+    bb.onclick = () => challengeBoss(chBoss.id);
+  } else {
+    bb.style.display = 'none';
   }
   if (map.bossSide && !flags.bossBeaten[map.bossSide]) {
     const sb = BOSSES[map.bossSide];
-    const ok = P.lv >= sb.lv - 4;
-    bossBtns += `<button class="btn" id="btn-side-boss" ${ok ? '' : 'disabled'}>支线 · ${sb.name}</button>`;
-  }
-  bb.outerHTML = bossBtns || '<button class="btn btn-primary" id="btn-boss" style="display:none"></button>';
-  if (bossBtns) {
-    const cb = $('#btn-chapter-boss');
-    if (cb) { cb.title = '主线头目，誓死一战，不可逃走！'; cb.onclick = () => challengeBoss(CHAPTERS[flags.ch - 1].boss, true); }
+    bb.insertAdjacentHTML('afterend', `<button class="btn" id="btn-side-boss" ${P.lv >= sb.lv - 4 ? '' : 'disabled'}>支线 · ${sb.name}</button>`);
     const sbt = $('#btn-side-boss');
-    if (sbt) { sbt.title = '支线头目，可获珍稀奖励。'; sbt.onclick = () => challengeBoss(map.bossSide, false); }
+    sbt.title = '支线头目，可获珍稀奖励。';
+    sbt.onclick = () => challengeBoss(map.bossSide);
   }
 
   $('#quest-box').innerHTML = `<b style="color:var(--red)">${chapter.text.split('】')[0]}】</b>${chapter.text.split('】')[1] || ''}`;
@@ -393,38 +396,122 @@ function openBag() {
   $('#modal-root').querySelectorAll('[data-read]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.read, it = ITEMS[id];
     removeItem(id);
-    P.skills.push(it.bookSkill);
+    const slot = grantSkill(it.bookSkill);
+    recompute();
     Sfx.levelup();
     log(`你参悟了「${SKILLS[it.bookSkill].name}」！`, 'good');
     save();
     closeModal();
-    modal('武学精进', `<p>你挑灯夜读，豁然贯通——习得「<b>${SKILLS[it.bookSkill].name}</b>」！</p><p class="muted">${SKILLS[it.bookSkill].desc}</p>`,
+    modal('武学精进', `<p>你挑灯夜读，豁然贯通——习得「<b>${SKILLS[it.bookSkill].name}</b>」！</p>
+      <p class="muted">${SKILLS[it.bookSkill].desc}</p>
+      ${slot ? `<p>真气自行流转，此功已运于<b style="color:var(--jade)">${slot}</b>之位。</p>` : ''}`,
       [{ label: '好哉', primary: true, fn: () => openBag() }]);
   }));
 }
 
+// ---------- 人物属性 ----------
+function openStats() {
+  const s = SECTS[P.sect];
+  const stat = (label, val, sub) => `<div class="stat-cell"><span>${label}</span><b>${val}</b>${sub ? `<em>${sub}</em>` : ''}</div>`;
+  const gear = [
+    ['兵刃', P.weapon], ['护甲', P.armor], ['饰品', P.acc]
+  ].map(([k, id]) => `<div class="stat-cell"><span>${k}</span><b class="small">${id ? esc(ITEMS[id].name) + (forgeStar(id) ? ' +' + forgeStar(id) : '') : '无'}</b></div>`).join('');
+  const slots = [
+    ['主套路', P.rtSkill], ['副套路', P.rtSkill2], ['内功', P.inSkill], ['轻功', P.agSkill]
+  ].map(([k, id]) => `<div class="stat-cell"><span>${k}</span><b class="small">${id ? esc(SKILLS[id].name) : '——'}</b><em>${id ? CAT_NAME[SKILLS[id].cat] + ' · ' + SKILLS[id].lv + '级' : '待运功'}</em></div>`).join('');
+  const fx = [];
+  if (P.ls) fx.push(`攻击吸血 ${P.ls}%`);
+  if (P.dmgred) fx.push(`受到伤害 -${P.dmgred}%`);
+  if (P.dodgeBonus) fx.push(`闪避 +${P.dodgeBonus}%`);
+  if (P.regen) fx.push(`每回合回复 ${P.regen}% 气血`);
+  if (P.mpregen) fx.push(`每回合回复内力 +${P.mpregen}`);
+  if (P.firstCrit) fx.push('每战首击必定会心');
+  modal(`人物 · ${esc(P.name)}`,
+    `<p class="muted" style="margin-bottom:6px">${s.name}（${s.tag}）· ${P.lv} 级${P.title ? ' · 「' + TITLES[P.title].name + '」' : ''}　心法：${s.passive.text}</p>
+     <div class="divider"></div><p><b>根骨属性</b></p>
+     <div class="stat-grid">
+       ${stat('气血上限', P.hpMax, P.regen ? '每回合+' + P.regen + '%' : '')}
+       ${stat('内力上限', P.mpMax, P.mpregen ? '每回合+' + P.mpregen : '')}
+       ${stat('攻 击', P.atk)}${stat('防 御', P.def)}
+       ${stat('身 法', P.spd, '闪避+' + P.dodgeBonus + '%')}${stat('暴 击', P.crt + '%', P.firstCrit ? '首击必暴' : '')}
+     </div>
+     ${fx.length ? `<p style="margin-top:8px"><b>奇特效性</b></p><p class="fx-line">${fx.join('　·　')}</p>` : ''}
+     <div class="divider"></div><p><b>武学运功</b> <span class="muted">（已参悟的被动招式增益，均已计入上述属性）</span></p>
+     <div class="stat-grid">${slots}</div>
+     <p style="margin-top:8px"><b>随身装备</b></p>
+     <div class="stat-grid">${gear}</div>
+     <div class="divider"></div><p><b>江湖履历</b></p>
+     <p style="font-size:13.5px;line-height:2">败敌 ${P.kills} 人 · 斩头目 ${P.bossKills} 员 · 比武夺冠 ${P.tourWins} 次 · 缉悬赏 ${flags.bountyCount} 张<br>
+     已习武学 ${P.skills.length - 1} 门 · 锻造神兵 ${P.forgeSucc} 次 · 身怀 <span class="gold">${P.silver}</span> 两 · 获名号 ${P.titles.length} 个</p>`,
+    [{ label: '关闭', fn: null }, { label: '侠影犹在', primary: true }]);
+}
+
 // ---------- 武学 ----------
+function moveRow(m) {
+  const un = moveUnlocked(m);
+  const tag = m.t === 'act' ? '<span class="mtag act">主动</span>' : '<span class="mtag pas">被动</span>';
+  let d;
+  if (m.t === 'pas') d = moveFxDesc(m);
+  else if (m.heal) d = `回复${Math.round(m.heal * 100)}%气血${m.healMp ? `、${Math.round(m.healMp * 100)}%内力` : ''}`;
+  else {
+    d = `威力 ${r1(m.mult * (m.hits || 1))} 倍${m.hits > 1 ? `（${m.hits}连击）` : ''}`;
+    const fx = moveFxDesc(m);
+    if (fx && fx !== '寻常招式') d += ' · ' + fx;
+  }
+  return `<div class="move-row${un ? '' : ' locked'}"><span class="mno">${MV_NAME[m.mv - 1]}</span>${tag}<b>${esc(m.name)}</b><span class="mfx">${d}${un ? '' : `　<span class="red">${m.unlock}级参悟</span>`}</span></div>`;
+}
+
 function openSkills() {
   const s = SECTS[P.sect];
   const sectSkillIds = s.skills.map((d, i) => P.sect + '_s' + i);
-  const mine = P.skills.filter(k => k !== 'basic').map(k => {
-    const sk = SKILLS[k], can = P.lv >= sk.lv;
+  const equipped = equippedSkillIds();
+
+  const slotRow = (label, id) => {
+    if (!id) return `<div class="list-row"><div class="grow"><b class="muted">${label} · 空</b><small>习得${label === '主套路' || label === '副套路' ? '套路' : label}武学后自动运功于此</small></div></div>`;
+    const sk = SKILLS[id];
+    return `<div class="list-row equipped">
+      <div class="grow"><b>${esc(sk.name)}</b> <span class="tag">${label} · ${CAT_NAME[sk.cat]}</span>
+        <small>${sk.desc}</small>
+        <div style="margin-top:5px">${sk.moves.map(moveRow).join('')}</div></div>
+    </div>`;
+  };
+
+  const catRows = cat => P.skills.filter(k => k !== 'basic' && SKILLS[k].cat === cat).map(k => {
+    const sk = SKILLS[k];
+    const worn = equipped.includes(k);
+    const canWear = P.lv >= sk.lv;
     return `<div class="list-row">
-      <div class="grow"><b>${sk.name}</b> ${can ? '<span class="tag">可施展</span>' : `<span class="tag">${sk.lv}级解锁</span>`}
-        <small>${sk.desc} · ${sk.mp ? `耗内力 ${sk.mp}` : '无消耗'}${sk.mult ? ` · 威力 ${(sk.mult * (sk.hits || 1)).toFixed(2)}倍` : ''}</small></div>
+      <div class="grow"><b>${esc(sk.name)}</b> <span class="tag">${CAT_NAME[cat]}</span>
+        <small>${sk.desc} · ${sk.lv}级武学${canWear ? '' : '（' + sk.lv + '级方可参悟）'}</small></div>
+      ${worn ? '<span class="tag jade">运功中</span>' : (canWear ? `<button class="btn btn-sm btn-primary" data-wear="${k}">运功</button>` : '<span class="tag">未参悟</span>')}
     </div>`;
   }).join('');
+
   const future = sectSkillIds.filter(k => !P.skills.includes(k)).map(k =>
-    `<div class="list-row"><div class="grow"><b>${SKILLS[k].name}</b><small>${SKILLS[k].lv} 级时由师父传授 · ${SKILLS[k].desc}</small></div></div>`).join('');
+    `<div class="list-row"><div class="grow"><b>${esc(SKILLS[k].name)}</b> <span class="tag">${CAT_NAME[SKILLS[k].cat]}</span><small>${SKILLS[k].lv} 级时由师父传授 · ${SKILLS[k].desc}</small></div></div>`).join('');
   const hiddenCount = Object.keys(HIDDEN_SKILLS).filter(k => !P.skills.includes(k)).length;
   const hiddenRows = hiddenCount
     ? `<div class="divider"></div><p><b>隐世武学</b></p><div class="list-row"><div class="grow"><b>？？？？</b><small>江湖五十五处，藏着 ${hiddenCount} 部无人知晓的绝学……游历四方，机缘自现。</small></div></div>`
     : '';
+
   modal(`武学 · ${s.name}`,
-    `<p class="muted" style="margin-bottom:6px">门派心法：<b>${s.passive.text}</b>　已习得 ${P.skills.length - 1} 门武学。</p>
-     <div class="divider"></div><p><b>已习得</b></p>${mine}
+    `<p class="muted" style="margin-bottom:6px">门派心法：<b>${s.passive.text}</b>　已习得 ${P.skills.length - 1} 门 · 每门武学五式招法，主动招式战斗中施展，被动招式运功即生效。</p>
+     <div class="divider"></div><p><b>运功之中</b></p>
+     ${slotRow('主套路', P.rtSkill)}${slotRow('副套路', P.rtSkill2)}${slotRow('内功', P.inSkill)}${slotRow('轻功', P.agSkill)}
+     <div class="divider"></div><p><b>套路武学</b> <span class="muted">（攻伐招式为主，可运功两门）</span></p>${catRows('rt') || '<p class="muted">尚无。</p>'}
+     <div class="divider"></div><p><b>内功武学</b> <span class="muted">（被动增益为主，附疗伤/吸星之法）</span></p>${catRows('in') || '<p class="muted">尚无。</p>'}
+     <div class="divider"></div><p><b>轻功武学</b> <span class="muted">（身法闪避为主，附凌空迅击）</span></p>${catRows('ag') || '<p class="muted">尚无。</p>'}
      ${future ? `<div class="divider"></div><p><b>门派深造</b></p>${future}` : ''}${hiddenRows}`,
-    [{ label: '关闭', fn: null }, { label: '悟已往之不谏', primary: true }]);
+    [{ label: '关闭', fn: null }, { label: '招式在心', primary: true }]);
+
+  $('#modal-root').querySelectorAll('[data-wear]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.wear, sk = SKILLS[id];
+    const slot = forceEquip(id);
+    recompute(); save();
+    Sfx.click();
+    toast(`「${sk.name}」已运于${slot}之位。`);
+    closeModal(); renderStatus(); openSkills();
+  }));
 }
 
 // ---------- 江湖舆图 ----------
@@ -463,7 +550,7 @@ function about() {
     `<p>一款致敬金庸、古龙武侠世界的回合制 RPG，纯前端单文件，无需安装。</p>
      <div class="divider"></div>
      <p><b>十大门派</b>：各有 15 阶门派武学与独门被动心法。</p>
-     <p><b>二百余门武学</b>：门派 150 · 江湖秘籍 20 · 隐世绝学 30。</p>
+     <p><b>二百余门武学</b>：分套路 · 内功 · 轻功三系，每门五式招法，主动被动相辅——门派 150 · 江湖秘籍 20 · 隐世绝学 32，共千余式招法。</p>
      <p><b>三百余件物品</b>：兵刃 84 · 护甲 40 · 饰品 36 · 丹药 24 · 材料 40 · 珍宝 50 · 秘籍 20 · 奇物 18。</p>
      <p><b>五十五处江湖</b>：八大地域，十章主线，十八头目。</p>
      <p><b>伙伴同行</b>：十六位江湖豪杰可招入麾下，至多两人随行出战。</p>

@@ -27,7 +27,7 @@ function startBattle(enemyTpl, opts = {}) {
     defBuffTurns: 0, atkBuffTurns: 0, cover: false,
     enemyStun: false, dot: null,
     bf: { atk: 0, def: 0, spd: 0, nextCrit: false, dodge: false },
-    firstCrit: passiveId() === 'firstcrit',
+    firstCrit: passiveId() === 'firstcrit' || !!P.firstCrit,
     busy: false, round: 0
   };
   if (passiveId() === 'opening') {
@@ -76,32 +76,40 @@ function shakePanel(sel) {
 
 function renderBattleActions() {
   const box = $('#battle-actions');
-  const skills = P.skills.filter(k => P.lv >= SKILLS[k].lv);
-  const skBtns = skills.map(k => {
-    const sk = SKILLS[k];
-    const can = P.mp >= sk.mp && !(sk.hpCost && P.hp <= P.hpMax * .15);
-    return `<button class="btn ${k === 'basic' ? 'btn-primary' : ''}" data-sk="${k}" ${can ? '' : 'disabled'}>${sk.name}<small>${sk.mp ? `内力 ${sk.mp}` : '无消耗'}${sk.hits > 1 ? ' · ' + sk.hits + '连击' : ''}</small></button>`;
-  }).join('');
+  const btns = [`<button class="btn btn-primary" data-skl="basic" data-mvi="0">普通攻击<small>不耗内力 · 拳脚兵刃招呼</small></button>`];
+  [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
+    if (!id || !SKILLS[id]) return;
+    const sk = SKILLS[id];
+    sk.moves.forEach((m, i) => {
+      if (m.t !== 'act' || !moveUnlocked(m)) return;
+      const can = P.mp >= m.mp && !(m.hpCost && P.hp <= P.hpMax * .15);
+      let sub;
+      if (m.heal) {
+        sub = `回复${Math.round(m.heal * 100)}%气血${m.healMp ? '、' + Math.round(m.healMp * 100) + '%内力' : ''}`;
+      } else {
+        sub = `威力${r1(m.mult * (m.hits || 1))}倍${m.hits > 1 ? `（${m.hits}连击）` : ''}`;
+        const fx = moveFxDesc(m);
+        if (fx && fx !== '寻常招式') sub += ' · ' + fx;
+      }
+      btns.push(`<button class="btn" data-skl="${id}" data-mvi="${i}" ${can ? '' : 'disabled'}>${m.name}<small>${sk.name} · ${m.mp ? '内力' + m.mp : '无消耗'} · ${sub}</small></button>`);
+    });
+  });
   const potBtns = Object.entries(P.bag).filter(([id]) => {
     const it = ITEMS[id];
-    return it && it.cat === 'pot' && !POTIONS[it.pot].perm && !POTIONS[it.pot].full === false;
-  }).map(([id, n]) => {
-    const it = ITEMS[id], pot = POTIONS[it.pot];
-    const battleUse = !pot.perm;
-    return `<button class="btn btn-sm" data-pot="${id}" ${battleUse ? '' : 'disabled'}>${it.name} ×${n}</button>`;
-  }).join('');
+    return it && it.cat === 'pot' && !POTIONS[it.pot].perm;
+  }).map(([id, n]) => `<button class="btn btn-sm" data-pot="${id}">${ITEMS[id].name} ×${n}</button>`).join('');
   const flee = B.noFlee ? '' : `<button class="btn" data-flee="1">逃 走</button>`;
-  box.innerHTML = skBtns + potBtns + flee;
-  box.querySelectorAll('[data-sk]').forEach(b => b.addEventListener('click', () => playerSkill(b.dataset.sk)));
+  box.innerHTML = btns.join('') + potBtns + flee;
+  box.querySelectorAll('[data-skl]').forEach(b => b.addEventListener('click', () => playerMove(b.dataset.skl, +b.dataset.mvi)));
   box.querySelectorAll('[data-pot]').forEach(b => b.addEventListener('click', () => playerPotion(b.dataset.pot)));
   const f = box.querySelector('[data-flee]');
   if (f) f.addEventListener('click', playerFlee);
 }
 
-// —— 玩家伤害计算 ——
-function calcPlayerHit(sk) {
+// —— 玩家伤害计算（招式级） ——
+function calcPlayerHit(m) {
   const e = B.e;
-  if (!sk.mustHit) {
+  if (!m.mustHit) {
     const dodge = clamp(4 + (e.spd - P.spd - (B.bf.spd ? P.lv : 0)) * .8, 2, 25);
     if (Math.random() * 100 < dodge) return { miss: true };
   }
@@ -109,45 +117,46 @@ function calcPlayerHit(sk) {
   if (passiveId() === 'rage' && P.hp < P.hpMax * .3) atk *= 1.25;
   if (B.atkBuffTurns > 0) atk *= 1.3;
   if (B.bf.atk > 0) atk *= 1.25;
-  const hits = sk.hits || 1;
+  const hits = m.hits || 1;
   let total = 0, critAny = false;
   for (let i = 0; i < hits; i++) {
     let crit = false;
-    if (sk.mustCrit) crit = true;
+    if (m.mustCrit) crit = true;
     else if (B.firstCrit) { crit = true; B.firstCrit = false; }
     else if (B.bf.nextCrit) { crit = true; B.bf.nextCrit = false; }
-    else crit = Math.random() * 100 < (P.crt + (sk.critBonus || 0));
-    const defv = sk.ignoreDef ? 0 : e.def * .6;
-    let d = (atk * sk.mult - defv) * rf(.85, 1.15);
+    else crit = Math.random() * 100 < (P.crt + (m.critBonus || 0));
+    const defv = m.ignoreDef ? 0 : e.def * .6;
+    let d = (atk * m.mult - defv) * rf(.85, 1.15);
     if (crit) { d *= 1.8; critAny = true; }
     total += Math.max(1, Math.round(d));
   }
   return { dmg: total, crit: critAny };
 }
 
-function playerSkill(key) {
+function playerMove(key, idx) {
   if (!B || B.busy) return;
-  const sk = SKILLS[key];
-  if (P.mp < sk.mp) return;
+  const m = key === 'basic' ? { name: '普通攻击', t: 'act', mult: 1, mp: 0 } : SKILLS[key].moves[idx];
+  if (!m) return;
+  if (P.mp < m.mp) return;
   B.busy = true;
   Sfx.ensure();
-  P.mp -= sk.mp;
-  if (sk.hpCost) {
-    const cost = Math.max(1, Math.round(P.hpMax * sk.hpCost));
+  P.mp -= m.mp;
+  if (m.hpCost) {
+    const cost = Math.max(1, Math.round(P.hpMax * m.hpCost));
     P.hp = Math.max(1, P.hp - cost);
     blog(`你强催真气，燃烧自身气血 ${cost} 点！`, 'bad');
   }
-  if (sk.heal) {
-    const h = Math.round(P.hpMax * sk.heal), m = Math.round(P.mpMax * (sk.healMp || 0));
-    P.hp = clamp(P.hp + h, 0, P.hpMax); P.mp = clamp(P.mp + m, 0, P.mpMax);
+  if (m.heal) {
+    const h = Math.round(P.hpMax * m.heal), mm = Math.round(P.mpMax * (m.healMp || 0));
+    P.hp = clamp(P.hp + h, 0, P.hpMax); P.mp = clamp(P.mp + mm, 0, P.mpMax);
     Sfx.heal();
-    blog(`你运转「${sk.name}」，真气流转周天——气血 +${h}，内力 +${m}！`, 'good');
+    blog(`你运转「<b>${m.name}</b>」，真气流转周天——气血 +${h}，内力 +${mm}！`, 'good');
     floatDmg('player', '+' + h, 'heal');
     renderBattle();
     return setTimeout(companionTurn, 650);
   }
-  blog(`你使出「<b>${sk.name}</b>」！`);
-  const r = calcPlayerHit(sk);
+  blog(`你使出「<b>${m.name}</b>」！`);
+  const r = calcPlayerHit(m);
   if (r.miss) {
     Sfx.miss();
     blog(`${B.e.name}身形一晃，堪堪避过！`, 'bad');
@@ -155,30 +164,32 @@ function playerSkill(key) {
   } else {
     B.e.hp = Math.max(0, B.e.hp - r.dmg);
     if (r.crit) Sfx.crit(); else Sfx.hit();
-    blog(`击中${B.e.name}，造成 <b>${r.dmg}</b> 点伤害${r.crit ? '（会心一击！）' : ''}${sk.hits > 1 ? `（${sk.hits}连击）` : ''}！`, r.crit ? 'good' : '');
+    blog(`击中${B.e.name}，造成 <b>${r.dmg}</b> 点伤害${r.crit ? '（会心一击！）' : ''}${m.hits > 1 ? `（${m.hits}连击）` : ''}！`, r.crit ? 'good' : '');
     floatDmg('enemy', '-' + r.dmg, r.crit ? 'crit' : '');
     shakePanel('#battle-stage');
-    if (sk.lifesteal && r.dmg > 0) {
-      const h = Math.round(r.dmg * sk.lifesteal);
+    // 吸血：武学被动（百分比）+ 招式自带（小数）
+    const lsPct = (P.ls || 0) + (m.lifesteal || 0) * 100;
+    if (lsPct > 0 && r.dmg > 0) {
+      const h = Math.round(r.dmg * lsPct / 100);
       P.hp = clamp(P.hp + h, 0, P.hpMax);
       blog(`真气牵引，你吸取敌人体力，气血 +${h}。`, 'good');
       floatDmg('player', '+' + h, 'heal');
     }
-    if (sk.mpDrain && r.dmg > 0) {
-      P.mp = clamp(P.mp + sk.mpDrain, 0, P.mpMax);
-      blog(`吞纳真气，你的内力 +${sk.mpDrain}。`, 'good');
+    if (m.mpDrain && r.dmg > 0) {
+      P.mp = clamp(P.mp + m.mpDrain, 0, P.mpMax);
+      blog(`吞纳真气，你的内力 +${m.mpDrain}。`, 'good');
     }
-    if (sk.dot && B.e.hp > 0) {
-      B.dot = { dmg: Math.max(2, Math.round(P.atk * sk.dot)), turns: 3 };
+    if (m.dot && B.e.hp > 0) {
+      B.dot = { dmg: Math.max(2, Math.round(P.atk * m.dot)), turns: 3 };
       blog(`${B.e.name}中了阴毒，气血将源源流逝！`, 'good');
     }
-    if (sk.stun && B.e.hp > 0 && Math.random() < sk.stun) {
+    if (m.stun && B.e.hp > 0 && Math.random() < m.stun) {
       B.enemyStun = true;
       blog(`${B.e.name}被震得气血翻涌，动弹不得！`, 'good');
     }
   }
-  if (sk.defBuff) B.defBuffTurns = sk.defBuff;
-  if (sk.atkBuff) B.atkBuffTurns = sk.atkBuff;
+  if (m.defBuff) B.defBuffTurns = m.defBuff;
+  if (m.atkBuff) B.atkBuffTurns = m.atkBuff;
   renderBattle();
   if (B.e.hp <= 0) return setTimeout(victory, 650);
   setTimeout(companionTurn, 800);
@@ -302,7 +313,7 @@ function enemyTurn() {
   if (!B) return;
   const e = B.e;
   // 被动恢复
-  const regen = 3 + (passiveId() === 'regen' ? 4 : 0);
+  const regen = 3 + (P.mpregen || 0) + (passiveId() === 'regen' ? 4 : 0);
   P.mp = clamp(P.mp + regen, 0, P.mpMax);
   if (passiveId() === 'regenhp') P.hp = clamp(P.hp + Math.round(P.hpMax * .03), 0, P.hpMax);
   if (P.regen) P.hp = clamp(P.hp + Math.round(P.hpMax * P.regen / 100), 0, P.hpMax);
@@ -337,6 +348,7 @@ function enemyTurn() {
   // 攻击玩家
   let dodge = clamp(4 + (P.spd + (B.bf.spd ? P.lv : 0) - e.spd) * .8, 3, 30);
   if (passiveId() === 'dodge') dodge += 8;
+  dodge += (P.dodgeBonus || 0);
   if (B.bf.dodge || Math.random() * 100 < dodge) {
     B.bf.dodge = false;
     Sfx.miss();
@@ -346,6 +358,7 @@ function enemyTurn() {
   }
   let d = (e.atk * mult - P.def * .6) * rf(.85, 1.15);
   if (passiveId() === 'iron') d *= .9;
+  d *= 1 - (P.dmgred || 0) / 100;
   if (B.defBuffTurns > 0) d *= .5;
   if (B.bf.def > 0) d *= .5;
   if (B.cover) d *= .6;
@@ -457,7 +470,10 @@ function victory() {
     const rewards = [];
     if (rw.silver) { P.silver += rw.silver; rewards.push(`银两 ${rw.silver}`); }
     if (rw.item) { addItem(rw.item); rewards.push(`「${ITEMS[rw.item].name}」`); }
-    if (rw.skill && !P.skills.includes(rw.skill)) { P.skills.push(rw.skill); rewards.push(`绝学「${SKILLS[rw.skill].name}」`); }
+    if (rw.skill && !P.skills.includes(rw.skill)) {
+      const slot = grantSkill(rw.skill);
+      rewards.push(`绝学「${SKILLS[rw.skill].name}」${slot ? '（运功·' + slot + '）' : ''}`);
+    }
     if (rw.potions) Object.entries(rw.potions).forEach(([k, n]) => { addItem('pot_' + k, n); rewards.push(`${POTIONS[k].name} ×${n}`); });
     if (rw.sp) { addItem('sp_' + rw.sp); rewards.push(`「${SPECIALS[rw.sp].name}」`); }
     if (rewards.length) extra += `<div class="divider"></div><p><b>缴获：</b>${rewards.join('、')}</p>`;

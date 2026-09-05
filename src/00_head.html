@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>江湖录 · 武侠RPG v2</title>
+<title>江湖录 · 武侠RPG v2.1</title>
 <style>
   :root{
     --ink:#17171c; --ink2:#22222a;
@@ -121,6 +121,22 @@
   .loc-desc{color:var(--text-dim);margin-top:6px;line-height:1.8;font-size:14px}
   .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;margin-top:14px}
   .actions .btn{padding:8px 4px;font-size:14px}
+  .actions .grp{grid-column:1/-1;font-size:11.5px;letter-spacing:4px;color:var(--text-dim);border-bottom:1px dashed #00000022;padding-bottom:3px;margin-top:2px}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px;margin:8px 0 4px}
+  .stat-cell{background:rgba(0,0,0,.05);border:1px solid var(--paper-dark);border-radius:8px;padding:8px 10px;text-align:center;line-height:1.5}
+  .stat-cell span{display:block;font-size:11.5px;letter-spacing:3px;color:var(--text-dim)}
+  .stat-cell b{display:block;font-size:19px;letter-spacing:1px;margin-top:2px}
+  .stat-cell b.small{font-size:14.5px;line-height:1.5}
+  .stat-cell em{display:block;font-style:normal;font-size:11px;color:var(--jade);letter-spacing:1px;margin-top:2px}
+  .fx-line{font-size:13.5px;color:var(--jade);letter-spacing:1px}
+  .move-row{display:flex;align-items:baseline;gap:7px;padding:3px 0;font-size:13px;border-bottom:1px dashed #00000012;flex-wrap:wrap}
+  .move-row:last-child{border-bottom:none}
+  .move-row.locked{opacity:.48}
+  .move-row .mno{font-size:11px;color:var(--gold-dim);letter-spacing:1px;white-space:nowrap}
+  .move-row .mfx{color:var(--text-dim);font-size:12.5px}
+  .mtag{font-size:10.5px;padding:0 7px;border-radius:99px;letter-spacing:1px;border:1px solid}
+  .mtag.act{color:var(--red);border-color:var(--red)}
+  .mtag.pas{color:var(--jade);border-color:var(--jade)}
   .quest-box{margin-top:14px;border-left:4px solid var(--red);padding:8px 12px;background:rgba(166,58,46,.07);border-radius:0 8px 8px 0;font-size:14px;line-height:1.8}
   .comp-strip{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
   .comp-chip{
@@ -215,7 +231,7 @@
       <button class="btn" id="btn-continue" style="display:none">重出江湖</button>
       <button class="btn" id="btn-about">关于此书</button>
     </div>
-    <div class="title-foot">致敬金庸 · 古龙 武侠世界 · 豪华版<br>十大门派 · 二百武学 · 三百珍品 · 五十五处江湖 · 伙伴同行<br>悬赏 · 锻造 · 比武大会 · 称号 · 隐世奇遇<br>同人练手之作 · 纯前端单文件 · 无需安装</div>
+    <div class="title-foot">致敬金庸 · 古龙 武侠世界 · 豪华版<br>十大门派 · 二百武学三系千招 · 三百珍品 · 五十五处江湖 · 伙伴同行<br>悬赏 · 锻造 · 比武大会 · 称号 · 隐世奇遇<br>同人练手之作 · 纯前端单文件 · 无需安装</div>
   </div>
 
   <div id="screen-create" class="screen">
@@ -249,19 +265,24 @@
       <div class="loc-head"><h2 id="loc-name"></h2><span class="sub" id="loc-sub"></span></div>
       <div class="loc-desc" id="loc-desc"></div>
       <div class="actions">
+        <div class="grp">— 历 练 —</div>
         <button class="btn btn-primary" id="btn-explore">探 索</button>
         <button class="btn btn-primary" id="btn-boss" style="display:none"></button>
-        <button class="btn" id="btn-travel">江湖舆图</button>
+        <div class="grp">— 人 物 —</div>
+        <button class="btn" id="btn-skills">武 学</button>
+        <button class="btn" id="btn-stats">属 性</button>
+        <button class="btn" id="btn-bag">行 囊</button>
         <button class="btn" id="btn-companions">伙 伴</button>
+        <div class="grp">— 江 湖 —</div>
+        <button class="btn" id="btn-travel">江湖舆图</button>
         <button class="btn btn-gold" id="btn-bounty">悬赏榜</button>
-        <button class="btn btn-gold" id="btn-forge">锻 造</button>
         <button class="btn btn-jade" id="btn-tournament">比武大会</button>
+        <button class="btn btn-gold" id="btn-forge">锻 造</button>
         <button class="btn" id="btn-titles">称 号</button>
+        <div class="grp">— 休 整 —</div>
+        <button class="btn" id="btn-shop">飞鸽购药</button>
         <button class="btn" id="btn-rest">客栈歇息</button>
         <button class="btn" id="btn-train">打坐修炼</button>
-        <button class="btn" id="btn-shop">飞鸽购药</button>
-        <button class="btn" id="btn-bag">行 囊</button>
-        <button class="btn" id="btn-skills">武 学</button>
       </div>
       <div class="comp-strip" id="comp-strip"></div>
       <div class="quest-box" id="quest-box"></div>

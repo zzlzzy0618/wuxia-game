@@ -89,14 +89,39 @@ const tests = `
   }
   // 秘籍 ↔ 武学对应
   UNIVERSAL_SKILLS.forEach((d, i) => {
-    assert(ITEMS['book_univ' + i] && ITEMS['book_univ' + i].bookSkill === 'univ' + i, '秘籍 ' + i + ' 与武学不对应');
+    assert(ITEMS['book_univ' + i] && ITEMS['book_univ' + i].bookSkill === 'univ' + i, 'book_univ' + i + ' 秘籍不对应');
     assert(SKILLS['univ' + i].name === d[0], 'univ' + i + ' 名称不对应');
   });
   // 通用/隐世武学倍率修正生效（mult 应为 tier 倍率而非原始小系数）
   assert(SKILLS.univ0.mult >= 1, '基础剑法 mult 异常: ' + SKILLS.univ0.mult);
   assert(SKILLS.dugu.mult > 3, '独孤九剑 mult 异常: ' + SKILLS.dugu.mult);
+  // 武学三系 × 五式招法
+  const catCount = { rt: 0, in: 0, ag: 0 };
+  Object.values(SKILLS).forEach(sk => {
+    if (sk.id === 'basic') return;
+    assert(['rt', 'in', 'ag'].includes(sk.cat), sk.name + ' 缺少三系分类');
+    catCount[sk.cat]++;
+    assert(sk.moves && sk.moves.length === 5, sk.name + ' 招式不足五式');
+    const acts = sk.moves.filter(m => m.t === 'act').length;
+    if (sk.cat === 'rt') assert(acts === 4, sk.name + ' 套路应4主动1被动: ' + acts);
+    if (sk.cat === 'in') assert(acts === 1, sk.name + ' 内功应1主动4被动: ' + acts);
+    if (sk.cat === 'ag') assert(acts === 1, sk.name + ' 轻功应1主动4被动: ' + acts);
+    sk.moves.forEach((m, i) => {
+      assert(m.name && m.mv === i + 1, sk.name + ' 招式序号异常');
+      assert(m.unlock === sk.lv + MV_UNLOCK[i], sk.name + ' 招式解锁等级异常');
+    });
+    if (sk.cat === 'rt') {
+      const [m1, m2, , m4, m5] = sk.moves;
+      assert(m5.mult > m4.mult && m4.mult > m2.mult && m2.mult > m1.mult, sk.name + ' 招式威力不递增');
+    }
+    if (sk.cat === 'in' || sk.cat === 'ag') assert(sk.moves[4].t === 'pas', sk.name + ' 五式应为最强被动');
+  });
+  assert(SECT_SKILL_CATS.filter(c => c === 'rt').length === 8, '门派套路数不是8');
+  assert(SECT_SKILL_CATS.filter(c => c === 'in').length === 4, '门派内功数不是4');
+  assert(SECT_SKILL_CATS.filter(c => c === 'ag').length === 3, '门派轻功数不是3');
+  assert(catCount.rt + catCount.in + catCount.ag === skillCount - 1, '三系武学计数不齐');
   if (errs.length) { console.error('[1] 数据错误:', errs); process.exit(1); }
-  console.log('[1] 数据完整性 OK —— ' + Object.keys(SECTS).length + '门派 / ' + skillCount + '武学 / ' + itemCount + '物品 / ' + MAPS.length + '地图 / ' + Object.keys(BOSSES).length + '头目 / ' + Object.keys(COMPANIONS).length + '伙伴');
+  console.log('[1] 数据完整性 OK —— ' + Object.keys(SECTS).length + '门派 / ' + skillCount + '武学（' + catCount.rt + '套路 + ' + catCount.in + '内功 + ' + catCount.ag + '轻功，' + (skillCount - 1) * 5 + '式招法）/ ' + itemCount + '物品 / ' + MAPS.length + '地图 / ' + Object.keys(BOSSES).length + '头目 / ' + Object.keys(COMPANIONS).length + '伙伴');
 
   // ---- 同步化定时器 ----
   global.setTimeout = (fn) => { fn(); return 0; };
@@ -113,9 +138,11 @@ const tests = `
   assert(P.lv > before, '升级失败');
   assert(P.lv === 50, '经验溢出未封顶50级: ' + P.lv);
   assert(P.skills.length >= 16, '50级门派武学未学全: ' + P.skills.length);
+  assert(P.rtSkill && P.rtSkill2 && P.inSkill && P.agSkill, '50级四运功槽未满');
+  assert(equippedSkillIds().length === 4, '运功槽数量异常');
   const saved = loadSave();
   assert(saved && saved.p && saved.p.lv === 50, '存档读取失败');
-  console.log('[2] 建号/升级/存档 OK —— 少林直升50级，攻' + P.atk + ' 防' + P.def + ' 血' + P.hpMax + '，已学' + P.skills.length + '门武学');
+  console.log('[2] 建号/升级/存档 OK —— 少林直升50级，攻' + P.atk + ' 防' + P.def + ' 血' + P.hpMax + '，已学' + P.skills.length + '门武学，运功：' + equippedSkillIds().map(id => SKILLS[id].name).join('/'));
 
   // ---- [3] 系统功能 ----
   ensureBounty();
@@ -153,11 +180,12 @@ const tests = `
   function setup(lv, sect, wTier, aTier) {
     selectedSect = sect; newGame();
     P.lv = lv;
-    // 按等级解锁门派武学（模拟正常升级的玩家）
+    // 按等级解锁门派武学并自动运功（模拟正常升级的玩家）
     SECTS[sect].skills.forEach((def, i) => {
       const id = sect + '_s' + i;
-      if (P.lv >= SKILLS[id].lv && !P.skills.includes(id)) P.skills.push(id);
+      if (P.lv >= SKILLS[id].lv) grantSkill(id);
     });
+    reevaluateSlots();
     P.weapon = 'w_0_' + wTier; P.armor = 'a_4_' + aTier;
     // 符合等级财力的丹药配置
     P.bag = lv < 10 ? { pot_jinchuang: 4, pot_neixi: 2 }
@@ -173,6 +201,28 @@ const tests = `
   victory = function () { outcome = 'win'; return _victory(); };
   defeat = function () { outcome = 'lose'; return _defeat(); };
   function usePot(id) { if (P.bag[id]) { playerPotion(id); return true; } return false; }
+  // 招式选择：内功疗伤招 + 已解锁最强攻击招
+  function pickHealMove() {
+    let best = null;
+    if (P.inSkill) SKILLS[P.inSkill].moves.forEach((m, i) => {
+      if (m.t === 'act' && m.heal && moveUnlocked(m) && P.mp >= m.mp) best = [P.inSkill, i];
+    });
+    return best;
+  }
+  function pickBestMove() {
+    let best = null, bp = 1.0;
+    [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
+      if (!id) return;
+      SKILLS[id].moves.forEach((m, i) => {
+        if (m.t !== 'act' || m.heal || !moveUnlocked(m)) return;
+        if (m.mp > P.mp) return;
+        if (m.hpCost && P.hp <= P.hpMax * .15) return;
+        const p = m.mult * (m.hits || 1);
+        if (p > bp) { bp = p; best = [id, i]; }
+      });
+    });
+    return best;
+  }
   function autoFight(enemyTpl, opts) {
     outcome = null;
     startBattle(enemyTpl, opts || {});
@@ -182,9 +232,10 @@ const tests = `
     while (B && P.hp > 0 && g++ < 500) {
       if (P.hp < P.hpMax * .35 && (usePot(dahuan) || usePot(healPot))) continue;
       if (P.mp < 20 && (usePot('pot_neixi') || usePot(dahuan))) continue;
-      const u = P.skills.filter(k => SKILLS[k].lv <= P.lv && SKILLS[k].mp <= P.mp && !(SKILLS[k].hpCost && P.hp <= P.hpMax * .15));
-      u.sort((a, b) => (SKILLS[b].mult * (SKILLS[b].hits || 1)) - (SKILLS[a].mult * (SKILLS[a].hits || 1)));
-      playerSkill(u[0] || 'basic');
+      const hm = pickHealMove();
+      if (hm && P.hp < P.hpMax * .55) { playerMove(hm[0], hm[1]); continue; }
+      const mv = pickBestMove();
+      if (mv) playerMove(mv[0], mv[1]); else playerMove('basic', 0);
     }
     if (!outcome) outcome = P.hp > 0 && !B ? 'win' : 'lose';
     return outcome === 'win';

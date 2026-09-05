@@ -117,14 +117,14 @@ function boss(name, lv, o = {}) {
 }
 const BOSSES = {
   zhouba: boss('镇关西 · 周霸', 4, { flavor: '"江南这一带，规矩由我定！"', skills: [{ name: '横扫千军', mult: 1.95, chance: .42 }], reward: { silver: 300, item: 'w_tiejian' } }),
-  dugucan: boss('剑痴 · 独孤残', 14, { flavor: '"三十年了……终于有人配让我出剑。"', skills: [{ name: '独孤剑意', mult: 2.0, chance: .38 }], reward: { silver: 900, skill: 'dugu', item: 'w_poJunjian' } }),
-  jinlunseng: boss('蒙古国师 · 金轮僧', 24, { flavor: '"龙象般若，十龙十象之力！"', skills: [{ name: '五轮齐飞', mult: 2.6, chance: .45 }], reward: { silver: 2200, potions: { dahuan: 2 }, sp: 'feilin' } }),
+  dugucan: boss('剑痴 · 独孤残', 14, { flavor: '"三十年了……终于有人配让我出剑。"', skills: [{ name: '独孤剑意', mult: 1.85, chance: .33 }], reward: { silver: 900, skill: 'dugu', item: 'w_poJunjian' } }),
+  jinlunseng: boss('蒙古国师 · 金轮僧', 24, { atkMul: 1.9, flavor: '"龙象般若，十龙十象之力！"', skills: [{ name: '五轮齐飞', mult: 2.75, chance: .5 }], reward: { silver: 2200, potions: { dahuan: 2 }, sp: 'feilin' } }),
   shalifei: boss('大漠凶鹰 · 沙里飞', 28, { flavor: '"大漠孤烟直，长河落日……刀！"', skills: [{ name: '连环旋风刀', mult: 2.45, chance: .42 }], reward: { silver: 3200, item: 'a_ruanweijia' } }),
-  guimian: boss('鬼面判官', 31, { hpMul: 8.8, atkMul: 2.0, flavor: '"生死簿上，又添一名。"', skills: [{ name: '勾魂锁链', mult: 3.2, chance: .55 }], reward: { silver: 4500, potions: { dahuan: 3 } } }),
-  duanyanping: boss('大理逆徒 · 段延平', 35, { flavor: '"段氏的江山，本来就该是我的！"', skills: [{ name: '一阳指 · 邪焰', mult: 2.3, chance: .4 }, { name: '段家剑 · 血影', mult: 1.8, chance: .32 }], reward: { silver: 6500, potions: { xuelian: 2 }, sp: 'daliYudai' } }),
-  chenguiseng: boss('恶僧 · 成鬼僧', 39, { flavor: '"混元霹雳功成之日，便是尔等授首之时！"', skills: [{ name: '幻阴指', mult: 2.45, chance: .4 }], reward: { silver: 9000, skill: 'qiankun', sp: 'shenghuo' } }),
+  guimian: boss('鬼面判官', 31, { hpMul: 8.8, atkMul: 1.78, flavor: '"生死簿上，又添一名。"', skills: [{ name: '勾魂锁链', mult: 2.75, chance: .5 }], reward: { silver: 4500, potions: { dahuan: 3 } } }),
+  duanyanping: boss('大理逆徒 · 段延平', 35, { atkMul: 1.82, flavor: '"段氏的江山，本来就该是我的！"', skills: [{ name: '一阳指 · 邪焰', mult: 2.3, chance: .4 }, { name: '段家剑 · 血影', mult: 1.8, chance: .32 }], reward: { silver: 6500, potions: { xuelian: 2 }, sp: 'daliYudai' } }),
+  chenguiseng: boss('恶僧 · 成鬼僧', 39, { hpMul: 10.2, atkMul: 2.0, flavor: '"混元霹雳功成之日，便是尔等授首之时！"', skills: [{ name: '幻阴指', mult: 2.75, chance: .42 }], reward: { silver: 9000, skill: 'qiankun', sp: 'shenghuo' } }),
   dinglaoguai: boss('星宿老怪 · 丁老怪', 43, { flavor: '"星宿老仙，法力无边！"', skills: [{ name: '化功绵掌', mult: 2.45, chance: .4 }], reward: { silver: 12000, sp: 'shexinZhu' } }),
-  yuehuagongzhu: boss('月华宫主', 47, { atkMul: 1.58, flavor: '"能接我三掌者，方可离去。"', skills: [{ name: '明玉掌', mult: 1.85, chance: .35 }, { name: '移花接玉', mult: 1.4, chance: .22, lifesteal: .45 }], reward: { silver: 18000, sp: 'jianhun' } }),
+  yuehuagongzhu: boss('月华宫主', 47, { hpMul: 10.5, atkMul: 2.05, flavor: '"能接我三掌者，方可离去。"', skills: [{ name: '明玉掌', mult: 2.15, chance: .4 }, { name: '移花接玉', mult: 1.6, chance: .25, lifesteal: .45 }], reward: { silver: 18000, sp: 'jianhun' } }),
   dongfangyao: boss('魔教教主 · 东方曜', 50, { flavor: '"日出东方，唯我不败！"', skills: [{ name: '日月同辉', mult: 2.3, chance: .35 }, { name: '魔功滔天', mult: 2.6, chance: .25 }], reward: { silver: 50000 } }),
   // 支线
   taohuaDaozhu: boss('桃花岛主 · 黄青霞', 11, { flavor: '"五行八卦，生门在西北。找得到，算你赢。"', skills: [{ name: '碧海潮生', mult: 2.2, chance: .4 }], reward: { silver: 800, item: 'acc_yuxiao' }, side: true }),
