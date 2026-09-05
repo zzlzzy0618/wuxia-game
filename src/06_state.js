@@ -50,14 +50,14 @@ function forgeAdd(base, id) {
 }
 
 // —— 武学装备槽 ——
-// 套路两门（主/副，提供主动招式），内功、轻功各一门（以被动招式增益为主）
+// 套路一门（主动招式），内功、轻功各一门（以被动招式增益为主）
 function equippedSkillIds() {
-  return [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].filter(id => id && SKILLS[id]);
+  return [P.rtSkill, P.inSkill, P.agSkill].filter(id => id && SKILLS[id]);
 }
 function moveUnlocked(m) { return P.lv >= m.unlock; }
 
-const SLOT_KEYS = { rt: ['rtSkill', 'rtSkill2'], in: ['inSkill'], ag: ['agSkill'] };
-const SLOT_LABEL = { rtSkill: '主套路', rtSkill2: '副套路', inSkill: '内功', agSkill: '轻功' };
+const SLOT_KEYS = { rt: ['rtSkill'], in: ['inSkill'], ag: ['agSkill'] };
+const SLOT_LABEL = { rtSkill: '主套路', inSkill: '内功', agSkill: '轻功' };
 
 // 武学当前战力评估：套路取已解锁的最强主动招，内功/轻功按招式参悟进度折算
 // （如此，早年武学五式大成之前，不会被刚入门的高阶新武学轻易顶替）
@@ -79,12 +79,10 @@ function skillPower(id) {
 function autoEquip(id) {
   const sk = SKILLS[id];
   if (!sk || id === 'basic') return null;
-  if ([P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].includes(id)) return null;
+  if ([P.rtSkill, P.inSkill, P.agSkill].includes(id)) return null;
   if (sk.cat === 'rt') {
     if (!P.rtSkill) { P.rtSkill = id; return '主套路'; }
-    if (!P.rtSkill2) { P.rtSkill2 = id; return '副套路'; }
-    const weak = skillPower(P.rtSkill) <= skillPower(P.rtSkill2) ? 'rtSkill' : 'rtSkill2';
-    if (skillPower(P[weak]) < skillPower(id)) { P[weak] = id; return SLOT_LABEL[weak]; }
+    if (skillPower(P.rtSkill) < skillPower(id)) { P.rtSkill = id; return '主套路'; }
   } else if (sk.cat === 'in') {
     if (!P.inSkill) { P.inSkill = id; return '内功'; }
     if (skillPower(P.inSkill) < skillPower(id)) { P.inSkill = id; return '内功'; }
@@ -94,21 +92,37 @@ function autoEquip(id) {
   }
   return null;
 }
-// 习得武学并尝试自动运功
+// 习得武学并尝试自动运功；等级未至则记入待参悟，升级时自会贯通
 function grantSkill(id) {
-  if (!P.skills.includes(id)) P.skills.push(id);
+  const sk = SKILLS[id];
+  if (!sk) return null;
+  if (!P.skills.includes(id)) {
+    if (P.lv < sk.lv) {
+      if (!P.pendingSkills.includes(id)) P.pendingSkills.push(id);
+      return null;
+    }
+    P.skills.push(id);
+  }
   return autoEquip(id);
 }
-// 手动运功（武学界面）：直接装入对应系槽位，套路双槽时顶掉较弱一门
+// 升级后冲刷待参悟武学：等级已至者正式习得并自动运功，返回贯通说明
+function flushPending() {
+  const msgs = [], keep = [];
+  (P.pendingSkills || []).forEach(id => {
+    if (!SKILLS[id] || P.skills.includes(id)) return;
+    if (P.lv < SKILLS[id].lv) { keep.push(id); return; }
+    P.skills.push(id);
+    const slot = autoEquip(id);
+    msgs.push(`昔日所获「<b>${SKILLS[id].name}</b>」豁然贯通${slot ? '，已运功于' + slot : ''}！`);
+  });
+  P.pendingSkills = keep;
+  return msgs;
+}
+// 手动运功（武学界面）：直接装入对应系槽位
 function forceEquip(id) {
   const sk = SKILLS[id];
   if (!sk || id === 'basic') return null;
-  if (sk.cat === 'rt') {
-    if (!P.rtSkill) { P.rtSkill = id; return '主套路'; }
-    if (!P.rtSkill2) { P.rtSkill2 = id; return '副套路'; }
-    const weak = skillPower(P.rtSkill) <= skillPower(P.rtSkill2) ? 'rtSkill' : 'rtSkill2';
-    P[weak] = id; return SLOT_LABEL[weak];
-  }
+  if (sk.cat === 'rt') { P.rtSkill = id; return '主套路'; }
   const key = sk.cat === 'in' ? 'inSkill' : 'agSkill';
   P[key] = id; return SLOT_LABEL[key];
 }

@@ -84,7 +84,7 @@ function renderBattleActions() {
   const box = $('#battle-actions');
   const groups = { rt: [], in: [], ag: [] };
   groups.rt.push(`<button class="btn btn-primary" data-skl="basic" data-mvi="0">普通攻击<small>不耗内力 · 拳脚兵刃招呼</small></button>`);
-  [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
+  [P.rtSkill, P.inSkill, P.agSkill].forEach(id => {
     if (!id || !SKILLS[id]) return;
     const sk = SKILLS[id];
     sk.moves.forEach((m, i) => {
@@ -159,7 +159,7 @@ function autoBattleMove() {
   if (hm && P.hp < P.hpMax * .55) return playerMove(hm.id, hm.i);
   // 选威力最强的招式
   let best = null, bs = 0;
-  [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
+  [P.rtSkill, P.inSkill, P.agSkill].forEach(id => {
     if (!id || !SKILLS[id]) return;
     SKILLS[id].moves.forEach((m, i) => {
       if (m.t !== 'act' || m.heal || !moveUnlocked(m)) return;
@@ -555,7 +555,9 @@ function victory() {
     if (rw.item) { addItem(rw.item); rewards.push(`「${ITEMS[rw.item].name}」`); }
     if (rw.skill && !P.skills.includes(rw.skill)) {
       const slot = grantSkill(rw.skill);
-      rewards.push(`绝学「${SKILLS[rw.skill].name}」${slot ? '（运功·' + slot + '）' : ''}`);
+      rewards.push(P.skills.includes(rw.skill)
+        ? `绝学「${SKILLS[rw.skill].name}」${slot ? '（运功·' + slot + '）' : ''}`
+        : `绝学口诀「${SKILLS[rw.skill].name}」（${SKILLS[rw.skill].lv}级自会贯通）`);
     }
     if (rw.potions) Object.entries(rw.potions).forEach(([k, n]) => { addItem('pot_' + k, n); rewards.push(`${POTIONS[k].name} ×${n}`); });
     if (rw.sp) { addItem('sp_' + rw.sp); rewards.push(`「${SPECIALS[rw.sp].name}」`); }

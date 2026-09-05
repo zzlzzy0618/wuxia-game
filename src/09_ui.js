@@ -96,7 +96,7 @@ function renderHome() {
     bb.disabled = P.lv < chBoss.lv - 3;
     bb.textContent = '挑战 · ' + chBoss.name;
     bb.title = '主线头目，誓死一战，不可逃走！';
-    bb.onclick = () => challengeBoss(chBoss.id);
+    bb.onclick = () => challengeBoss(chapter.boss);
   } else {
     bb.style.display = 'none';
   }
@@ -347,9 +347,10 @@ function openBag() {
   const bookHtml = cats.book.map(([id, n]) => {
     const it = ITEMS[id];
     const known = P.skills.includes(it.bookSkill);
+    const lvOk = known || P.lv >= SKILLS[it.bookSkill].lv;
     return `<div class="list-row">
-      <div class="grow"><b>${it.name}</b>${n > 1 ? ' ×' + n : ''}<small>${it.desc}</small></div>
-      ${known ? '<span class="tag">已参悟</span>' : `<button class="btn btn-sm btn-primary" data-read="${id}">研读</button>`}
+      <div class="grow"><b>${it.name}</b>${n > 1 ? ' ×' + n : ''}<small>${it.desc}${lvOk ? '' : ' · 需 ' + SKILLS[it.bookSkill].lv + ' 级参悟'}</small></div>
+      ${known ? '<span class="tag">已参悟</span>' : (lvOk ? `<button class="btn btn-sm btn-primary" data-read="${id}">研读</button>` : `<span class="tag">${SKILLS[it.bookSkill].lv}级可参悟</span>`)}
     </div>`;
   }).join('') || '<p class="muted">无秘籍。</p>';
 
@@ -403,6 +404,8 @@ function openBag() {
   }));
   $('#modal-root').querySelectorAll('[data-read]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.read, it = ITEMS[id];
+    const sk = SKILLS[it.bookSkill];
+    if (P.lv < sk.lv) { toast(`「${sk.name}」玄奥非常，需 ${sk.lv} 级方可参悟。秘籍且先收好。`); return; }
     removeItem(id);
     const slot = grantSkill(it.bookSkill);
     recompute();
@@ -423,7 +426,7 @@ function openStats() {
   const stat = (label, val, sub) => `<div class="stat-cell"><span>${label}</span><b>${val}</b>${sub ? `<em>${sub}</em>` : ''}</div>`;
   const gear = EQUIP_SLOTS.map(s => `<div class="stat-cell"><span>${equipSlotName(s)}</span><b class="small">${P[s] ? esc(ITEMS[P[s]].name) + (forgeStar(P[s]) ? ' +' + forgeStar(P[s]) : '') : '无'}</b></div>`).join('');
   const slots = [
-    ['主套路', P.rtSkill], ['副套路', P.rtSkill2], ['内功', P.inSkill], ['轻功', P.agSkill]
+    ['主套路', P.rtSkill], ['内功', P.inSkill], ['轻功', P.agSkill]
   ].map(([k, id]) => `<div class="stat-cell"><span>${k}</span><b class="small">${id ? esc(SKILLS[id].name) : '——'}</b><em>${id ? CAT_NAME[SKILLS[id].cat] + ' · ' + SKILLS[id].lv + '级' : '待运功'}</em></div>`).join('');
   const fx = [];
   if (P.ls) fx.push(`攻击吸血 ${P.ls}%`);
@@ -473,7 +476,7 @@ function openSkills() {
   const equipped = equippedSkillIds();
 
   const slotRow = (label, id) => {
-    if (!id) return `<div class="list-row"><div class="grow"><b class="muted">${label} · 空</b><small>习得${label === '主套路' || label === '副套路' ? '套路' : label}武学后自动运功于此</small></div></div>`;
+    if (!id) return `<div class="list-row"><div class="grow"><b class="muted">${label} · 空</b><small>习得${label === '主套路' ? '套路' : label}武学后自动运功于此</small></div></div>`;
     const sk = SKILLS[id];
     return `<div class="list-row equipped">
       <div class="grow"><b>${esc(sk.name)}</b> <span class="tag">${label} · ${CAT_NAME[sk.cat]}</span>
@@ -503,8 +506,8 @@ function openSkills() {
   modal(`武学 · ${s.name}`,
     `<p class="muted" style="margin-bottom:6px">门派心法：<b>${s.passive.text}</b>　已习得 ${P.skills.length - 1} 门 · 每门武学五式招法，主动招式战斗中施展，被动招式运功即生效。</p>
      <div class="divider"></div><p><b>运功之中</b></p>
-     ${slotRow('主套路', P.rtSkill)}${slotRow('副套路', P.rtSkill2)}${slotRow('内功', P.inSkill)}${slotRow('轻功', P.agSkill)}
-     <div class="divider"></div><p><b>套路武学</b> <span class="muted">（攻伐招式为主，可运功两门）</span></p>${catRows('rt') || '<p class="muted">尚无。</p>'}
+     ${slotRow('主套路', P.rtSkill)}${slotRow('内功', P.inSkill)}${slotRow('轻功', P.agSkill)}
+     <div class="divider"></div><p><b>套路武学</b> <span class="muted">（攻伐招式为主，运功一门）</span></p>${catRows('rt') || '<p class="muted">尚无。</p>'}
      <div class="divider"></div><p><b>内功武学</b> <span class="muted">（被动增益为主，附疗伤/吸星之法）</span></p>${catRows('in') || '<p class="muted">尚无。</p>'}
      <div class="divider"></div><p><b>轻功武学</b> <span class="muted">（身法闪避为主，附凌空迅击）</span></p>${catRows('ag') || '<p class="muted">尚无。</p>'}
      ${future ? `<div class="divider"></div><p><b>门派深造</b></p>${future}` : ''}${hiddenRows}`,

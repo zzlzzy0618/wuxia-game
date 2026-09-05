@@ -138,11 +138,36 @@ const tests = `
   assert(P.lv > before, '升级失败');
   assert(P.lv === 50, '经验溢出未封顶50级: ' + P.lv);
   assert(P.skills.length >= 16, '50级门派武学未学全: ' + P.skills.length);
-  assert(P.rtSkill && P.rtSkill2 && P.inSkill && P.agSkill, '50级四运功槽未满');
-  assert(equippedSkillIds().length === 4, '运功槽数量异常');
+  assert(P.rtSkill && P.inSkill && P.agSkill, '50级三运功槽未满');
+  assert(equippedSkillIds().length === 3, '运功槽数量异常: ' + equippedSkillIds().length);
   const saved = loadSave();
   assert(saved && saved.p && saved.p.lv === 50, '存档读取失败');
   console.log('[2] 建号/升级/存档 OK —— 少林直升50级，攻' + P.atk + ' 防' + P.def + ' 血' + P.hpMax + '，已学' + P.skills.length + '门武学，运功：' + equippedSkillIds().map(id => SKILLS[id].name).join('/'));
+
+  // ---- [2.5] 武学等级门槛（等级不足入待参悟 · 升级自会贯通 · 旧档副套路迁移）----
+  selectedSect = 'shaolin'; newGame();
+  const gate = SKILLS['shaolin_s14'];
+  assert(gate.lv > 5, '高阶门派武学等级异常: ' + gate.lv);
+  assert(grantSkill(gate.id) === null, '等级不足不应运功');
+  assert(!P.skills.includes(gate.id), '等级不足竟直接习得高阶武学');
+  assert(P.pendingSkills.includes(gate.id), '高阶武学未入待参悟队列');
+  const gate2 = SKILLS['univ3'];
+  grantSkill(gate2.id);
+  assert(!P.skills.includes(gate2.id) && P.pendingSkills.includes(gate2.id), '江湖秘籍未按等级把关');
+  gainExp(200000);
+  assert(P.skills.includes(gate.id) && P.skills.includes(gate2.id), '升级后待参悟武学未自动贯通');
+  assert(!P.pendingSkills.includes(gate.id) && !P.pendingSkills.includes(gate2.id), '贯通后仍残留待参悟队列');
+  // v2.2 旧档迁移：取消副套路——较强者留任主套路
+  const d22 = JSON.parse(JSON.stringify(saved));
+  const stronger = d22.p.rtSkill;
+  d22.p.rtSkill = 'univ0'; d22.p.rtSkill2 = stronger;
+  restoreSave(d22);
+  assert(P.rtSkill === stronger, '副套路迁移未保留较强者: ' + P.rtSkill);
+  assert(!P.rtSkill2, '副套路槽未清除');
+  if (errs.length) { console.error('[2.5] 等级门槛错误:', errs); process.exit(1); }
+  console.log('[2.5] 武学等级门槛 OK —— 「' + gate.name + '」' + gate.lv + '级方贯通，升级自参悟；旧档副套路并入主套路');
+  // 恢复 [3] 所需的 50 级状态
+  selectedSect = 'shaolin'; newGame(); gainExp(200000);
 
   // ---- [3] 系统功能 ----
   ensureBounty();
@@ -248,7 +273,7 @@ const tests = `
   }
   function pickBestMove() {
     let best = null, bp = 1.0;
-    [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
+    [P.rtSkill, P.inSkill, P.agSkill].forEach(id => {
       if (!id) return;
       SKILLS[id].moves.forEach((m, i) => {
         if (m.t !== 'act' || m.heal || !moveUnlocked(m)) return;
@@ -299,7 +324,7 @@ const tests = `
   assert(actHtml.includes('sk-tabs'), '战斗技能界面缺少页签');
   ['套路', '内功', '轻功'].forEach(n => assert(actHtml.includes('>' + n + '</button>'), '战斗页签缺少「' + n + '」'));
   assert(actHtml.includes('普通攻击'), '套路页签缺少普通攻击');
-  [P.rtSkill, P.rtSkill2, P.inSkill, P.agSkill].forEach(id => {
+  [P.rtSkill, P.inSkill, P.agSkill].forEach(id => {
     if (!id) return;
     SKILLS[id].moves.forEach(m => {
       if (m.t === 'pas' && moveUnlocked(m)) assert(!actHtml.includes('>' + m.name + '<'), '被动招式「' + m.name + '」不应出现在选择中');

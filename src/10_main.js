@@ -9,7 +9,8 @@ function newGame() {
     bag: { pot_jinchuang: 3, pot_neixi: 2 },
     weapon: null, armor: null, acc: null, head: null, wrist: null, feet: null, ring: null, belt: null, forge: {},
     skills: ['basic'],
-    rtSkill: null, rtSkill2: null, inSkill: null, agSkill: null,
+    rtSkill: null, inSkill: null, agSkill: null,
+    pendingSkills: [],
     bonus: { hp: 0, mp: 0, atk: 0, def: 0, spd: 0, crt: 0 },
     comps: [], compActive: [],
     titles: ['newbie'], title: 'newbie',
@@ -57,6 +58,7 @@ function gainExp(n) {
         ups.push(`师父传授门派绝学「<b>${SKILLS[id].name}</b>」${slot ? '，已运功于' + slot : ''}！`);
       }
     });
+    flushPending().forEach(t => ups.push(t));
     reevaluateSlots().forEach(t => ups.push(t));
   }
   if (ups.length) {
@@ -87,7 +89,9 @@ function explore() {
     if (ev.skill) {
       const slot = grantSkill(ev.skill);
       recompute();
-      gains.push(`习得绝学「<b>${SKILLS[ev.skill].name}</b>」${slot ? '，真气自行运于' + slot : ''}！`);
+      gains.push(P.skills.includes(ev.skill)
+        ? `习得绝学「<b>${SKILLS[ev.skill].name}</b>」${slot ? '，真气自行运于' + slot : ''}！`
+        : `获绝学「<b>${SKILLS[ev.skill].name}</b>」——${SKILLS[ev.skill].lv}级方可参悟，你将口诀铭记于心。`);
     }
     if (ev.bonus) {
       Object.entries(ev.bonus).forEach(([k, v]) => { P.bonus[k] = (P.bonus[k] || 0) + v; });
@@ -182,6 +186,7 @@ function stopAuto(msg) {
 // ---------- 头目挑战 ----------
 function challengeBoss(bossId) {
   const boss = BOSSES[bossId];
+  if (!boss) return;
   modal('誓师一战',
     `<p><b>${boss.name}</b>（等级 ${boss.lv}）</p>
      <p class="muted">${boss.flavor}</p>
@@ -239,9 +244,15 @@ function restoreSave(d) {
   P.titles = P.titles || ['newbie'];
   if (!P.titles.includes('newbie')) P.titles.push('newbie');
   // 旧档迁移：补齐武学运功槽与新增装束槽
-  if (!P.rtSkill && !P.rtSkill2 && !P.inSkill && !P.agSkill) {
+  if (!P.rtSkill && !P.inSkill && !P.agSkill) {
     P.skills.slice().forEach(id => autoEquip(id));
   }
+  // v2.3 迁移：取消副套路——两门套路中较强者留任主套路
+  if (P.rtSkill2) {
+    if (!P.rtSkill || skillPower(P.rtSkill2) > skillPower(P.rtSkill)) P.rtSkill = P.rtSkill2;
+    P.rtSkill2 = null;
+  }
+  P.pendingSkills = P.pendingSkills || [];
   EQUIP_SLOTS.forEach(s => { if (P[s] === undefined) P[s] = null; });
   curMap = flags.loc || 'niujiacun';
   if (!MAPS.find(m => m.id === curMap)) curMap = 'niujiacun';
