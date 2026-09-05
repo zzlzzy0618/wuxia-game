@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>江湖录 · 武侠RPG v2</title>
+<style>
+  :root{
+    --ink:#17171c; --ink2:#22222a;
+    --paper:#f2ead8; --paper-dim:#e4d9c0; --paper-dark:#d9cbae;
+    --red:#a63a2e; --red-deep:#7d2a20;
+    --gold:#b98a44; --gold-dim:#8f6c34;
+    --text:#2b2622; --text-dim:#6f6250;
+    --jade:#4e7a63; --blue:#3d6f8e;
+    --shadow:0 6px 24px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--ink);
+    background-image:
+      radial-gradient(1200px 600px at 20% -10%, rgba(185,138,68,.10), transparent 60%),
+      radial-gradient(900px 500px at 110% 30%, rgba(166,58,46,.10), transparent 60%),
+      radial-gradient(700px 700px at 50% 120%, rgba(78,122,99,.08), transparent 60%);
+    color:var(--text);
+    font-family:"KaiTi","STKaiti","BiauKai","DFKai-SB","LiSu","SimSun",serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{max-width:820px;margin:0 auto;padding:14px 12px 40px;min-height:100%}
+  .screen{display:none;animation:fadeIn .35s ease}
+  .screen.active{display:block}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .panel{
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.015) 0 2px, transparent 2px 4px),
+      linear-gradient(160deg, var(--paper), var(--paper-dim));
+    border:1px solid var(--paper-dark);
+    border-radius:10px;
+    box-shadow:var(--shadow), inset 0 0 0 1px rgba(255,255,255,.35);
+    padding:16px;
+  }
+  .btn{
+    font-family:inherit;font-size:15px;cursor:pointer;
+    background:linear-gradient(160deg,var(--paper),var(--paper-dim));
+    color:var(--text);border:1px solid var(--paper-dark);
+    border-radius:8px;padding:8px 12px;letter-spacing:2px;
+    box-shadow:0 3px 0 rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.5);
+    transition:transform .08s ease, filter .12s ease;
+    user-select:none;
+  }
+  .btn:hover{filter:brightness(1.05)}
+  .btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
+  .btn-primary{background:linear-gradient(160deg,#b7443a,var(--red-deep));color:#f6e9d8;border-color:#6e241b;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+  .btn-jade{background:linear-gradient(160deg,#527d67,#3c5f4c);color:#eef3ec;border-color:#31513f}
+  .btn-gold{background:linear-gradient(160deg,#b98a44,#8f6c34);color:#fff8ea;border-color:#7a5c2a}
+  .btn-ghost{background:transparent;color:var(--paper);border-color:#56524a;box-shadow:none}
+  .btn-sm{font-size:13px;padding:4px 9px;letter-spacing:1px;border-radius:6px}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,var(--paper-dark),transparent);margin:12px 0}
+  .tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:99px;border:1px solid var(--gold-dim);color:var(--gold-dim);letter-spacing:1px;margin-left:4px}
+  .tag.red{border-color:var(--red);color:var(--red)}
+  .tag.jade{border-color:var(--jade);color:var(--jade)}
+  .muted{color:var(--text-dim)}
+  .gold{color:var(--gold-dim)}
+  .jade{color:var(--jade)}
+  .red{color:var(--red-deep)}
+
+  #screen-title{padding-top:8vh;text-align:center}
+  .title-wrap{position:relative;display:inline-block;margin-bottom:6px}
+  .game-title{
+    font-size:clamp(58px,15vw,100px);letter-spacing:16px;color:var(--paper);
+    text-shadow:0 2px 0 #000, 0 0 40px rgba(185,138,68,.35);
+    font-weight:700;
+  }
+  .seal{
+    position:absolute;right:-32px;bottom:6px;
+    width:50px;height:50px;background:var(--red);color:#f6e9d8;
+    display:flex;align-items:center;justify-content:center;
+    font-size:25px;border-radius:6px;transform:rotate(8deg);
+    box-shadow:0 4px 14px rgba(0,0,0,.5), inset 0 0 0 2px rgba(246,233,216,.55), inset 0 0 0 5px var(--red);
+    line-height:1;text-indent:2px;
+  }
+  .subtitle{color:var(--paper);opacity:.75;letter-spacing:8px;font-size:17px;margin:6px 0 40px}
+  .title-menu{display:flex;flex-direction:column;gap:14px;align-items:center}
+  .title-menu .btn{width:240px;font-size:18px;padding:12px}
+  .title-foot{margin-top:52px;color:#7c7264;font-size:13px;letter-spacing:2px;line-height:1.9}
+
+  .sect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:14px}
+  .sect-card{cursor:pointer;transition:transform .12s ease;position:relative}
+  .sect-card:hover{transform:translateY(-2px)}
+  .sect-card.selected{outline:3px solid var(--red);outline-offset:-1px}
+  .sect-card h3{font-size:19px;letter-spacing:3px}
+  .sect-card .passive{color:var(--red);font-size:12.5px;margin:6px 0}
+  .sect-card p.desc{font-size:13px;line-height:1.7;color:var(--text-dim)}
+  .sect-card ul{margin:8px 0 0 0;padding:0;list-style:none;font-size:12px;color:var(--text-dim)}
+  .sect-card ul li{margin:2px 0}
+  input.wuxia-input{
+    font-family:inherit;font-size:18px;letter-spacing:3px;text-align:center;
+    background:rgba(0,0,0,.06);border:none;border-bottom:2px solid var(--gold-dim);
+    padding:8px 12px;width:220px;color:var(--text);outline:none;border-radius:6px 6px 0 0;
+  }
+
+  .statusbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:12px;color:var(--paper)}
+  .statusbar .who{font-size:19px;letter-spacing:2px}
+  .statusbar .who small{opacity:.7;font-size:12px;margin-left:8px;letter-spacing:1px;display:block}
+  .bars{flex:1;min-width:230px;display:flex;flex-direction:column;gap:5px}
+  .bar{position:relative;height:16px;background:#0009;border:1px solid #ffffff26;border-radius:99px;overflow:hidden}
+  .bar i{position:absolute;left:6px;top:0;bottom:0;display:flex;align-items:center;font-size:11px;font-style:normal;color:#fffbe9;text-shadow:0 1px 2px #000;letter-spacing:1px;z-index:2}
+  .bar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;transition:width .4s ease}
+  .bar.hp .fill{background:linear-gradient(90deg,#c04a3c,#d97757)}
+  .bar.mp .fill{background:linear-gradient(90deg,#3d6f8e,#63a3a0)}
+  .bar.xp{height:10px}
+  .bar.xp .fill{background:linear-gradient(90deg,#8f6c34,#cfa257)}
+  .silver-line{font-size:14px;color:var(--gold);letter-spacing:1px}
+  .title-line{font-size:13px;color:var(--paper);opacity:.85;letter-spacing:1px}
+
+  .loc-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .loc-head h2{font-size:24px;letter-spacing:4px}
+  .loc-head .sub{color:var(--text-dim);letter-spacing:2px;font-size:13px}
+  .loc-desc{color:var(--text-dim);margin-top:6px;line-height:1.8;font-size:14px}
+  .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;margin-top:14px}
+  .actions .btn{padding:8px 4px;font-size:14px}
+  .quest-box{margin-top:14px;border-left:4px solid var(--red);padding:8px 12px;background:rgba(166,58,46,.07);border-radius:0 8px 8px 0;font-size:14px;line-height:1.8}
+  .comp-strip{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .comp-chip{
+    display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.06);
+    border:1px solid var(--paper-dark);border-radius:8px;padding:5px 10px;font-size:13px;
+  }
+  .comp-chip b{letter-spacing:1px}
+  .comp-chip .role{font-size:11px;color:var(--paper);border-radius:4px;padding:1px 6px;letter-spacing:1px}
+  .comp-chip .role.r-atk{background:var(--red)}
+  .comp-chip .role.r-heal{background:var(--jade)}
+  .comp-chip .role.r-sup{background:var(--blue)}
+  .comp-chip .role.r-tank{background:#6b5b46}
+  #log{margin-top:14px;max-height:210px;overflow-y:auto;font-size:14px;line-height:1.9;padding:4px 8px}
+  #log p{border-bottom:1px dashed #00000014;padding:3px 0}
+  #log p.good{color:var(--jade)}
+  #log p.bad{color:var(--red-deep)}
+  #log p.sys{color:var(--gold-dim)}
+
+  .battle-stage{position:relative;padding:18px 12px 14px;text-align:center;overflow:hidden}
+  .enemy-name{font-size:22px;letter-spacing:3px}
+  .enemy-flavor{color:var(--text-dim);font-size:12.5px;margin-top:2px;letter-spacing:1px}
+  .enemy-hp-wrap{max-width:380px;margin:10px auto 0}
+  .vs{ text-align:center;color:#8b7f6b;letter-spacing:6px;font-size:13px;margin:10px 0}
+  .float-dmg{
+    position:absolute;font-size:26px;font-weight:700;color:#e4574a;text-shadow:0 2px 0 #000,0 0 12px rgba(228,87,74,.6);
+    pointer-events:none;animation:floatUp 1s ease forwards;letter-spacing:1px;z-index:5;
+  }
+  .float-dmg.crit{font-size:34px;color:#ffb347}
+  .float-dmg.heal{color:#6fbf8f}
+  .float-dmg.miss{color:#a9a094;font-size:20px}
+  .float-dmg.ally{color:#7fa8d9}
+  @keyframes floatUp{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}15%{opacity:1;transform:translate(-50%,-6px) scale(1.1)}100%{opacity:0;transform:translate(-50%,-64px) scale(1)}}
+  .shake{animation:shake .35s ease}
+  @keyframes shake{0%,100%{transform:none}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+  #battle-log{max-height:150px;overflow-y:auto;font-size:14px;line-height:1.85;padding:2px 10px}
+  #battle-log p{border-bottom:1px dashed #00000012;padding:2px 0}
+  #battle-log p.good{color:var(--jade)}
+  #battle-log p.bad{color:var(--red-deep)}
+  #battle-log p.sys{color:var(--gold-dim)}
+  #battle-log p.ally{color:var(--blue)}
+  .skill-btns{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:12px}
+  .skill-btns .btn{font-size:14px;padding:7px 6px;letter-spacing:1px}
+  .skill-btns .btn small{display:block;font-size:11px;opacity:.7;letter-spacing:0;margin-top:2px}
+
+  #modal-root{position:fixed;inset:0;display:none;z-index:50}
+  #modal-root.show{display:flex;align-items:center;justify-content:center;padding:16px}
+  #modal-root .overlay{position:absolute;inset:0;background:rgba(8,8,10,.72);backdrop-filter:blur(2px)}
+  .modal{
+    position:relative;width:min(600px,94vw);max-height:86vh;overflow-y:auto;
+    animation:popIn .25s ease;
+  }
+  @keyframes popIn{from{opacity:0;transform:scale(.92) translateY(10px)}to{opacity:1;transform:none}}
+  .modal h2{font-size:21px;letter-spacing:4px;margin-bottom:4px}
+  .modal .hr{height:2px;background:linear-gradient(90deg,var(--red),transparent);margin:8px 0 14px;border:none}
+  .modal .body{font-size:14.5px;line-height:1.95}
+  .modal .foot{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+  .list-row{display:flex;align-items:center;gap:10px;padding:7px 6px;border-bottom:1px dashed #00000018;font-size:14px;flex-wrap:wrap}
+  .list-row .grow{flex:1;line-height:1.55;min-width:150px}
+  .list-row .grow b{letter-spacing:1px}
+  .list-row .grow small{display:block;color:var(--text-dim);font-size:12px}
+  .list-row .equipped{outline:2px solid var(--jade);outline-offset:-2px;border-radius:6px}
+  .toast{
+    position:fixed;left:50%;bottom:38px;transform:translateX(-50%);
+    background:var(--ink2);color:var(--paper);border:1px solid #ffffff2a;
+    padding:9px 22px;border-radius:99px;letter-spacing:2px;font-size:15px;z-index:99;
+    box-shadow:var(--shadow);animation:toastIn .25s ease;max-width:88vw;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;
+  }
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+
+  .mute-btn{position:fixed;top:12px;right:14px;z-index:40;width:38px;height:38px;border-radius:50%;padding:0;font-size:17px;display:flex;align-items:center;justify-content:center}
+  .ending-body{line-height:2.1;font-size:15px;text-align:justify}
+  .forge-star{color:var(--gold-dim);letter-spacing:1px}
+  .bounty-row .grow b{color:var(--red-deep)}
+  @media (max-width:560px){
+    .game-title{letter-spacing:10px}
+    .statusbar .who{width:100%}
+  }
+</style>
+</head>
+<body>
+<button class="btn btn-ghost mute-btn" id="mute-btn" title="音效开关">♪</button>
+<div id="app">
+
+  <div id="screen-title" class="screen active">
+    <div class="title-wrap">
+      <div class="game-title">江湖录</div>
+      <div class="seal">俠</div>
+    </div>
+    <div class="subtitle">仗 剑 江 湖 载 酒 行</div>
+    <div class="title-menu">
+      <button class="btn btn-primary" id="btn-new">初入江湖</button>
+      <button class="btn" id="btn-continue" style="display:none">重出江湖</button>
+      <button class="btn" id="btn-about">关于此书</button>
+    </div>
+    <div class="title-foot">致敬金庸 · 古龙 武侠世界 · 豪华版<br>十大门派 · 二百武学 · 三百珍品 · 五十五处江湖 · 伙伴同行<br>悬赏 · 锻造 · 比武大会 · 称号 · 隐世奇遇<br>同人练手之作 · 纯前端单文件 · 无需安装</div>
+  </div>
+
+  <div id="screen-create" class="screen">
+    <div class="panel">
+      <h2 style="letter-spacing:4px">拜师入门</h2>
+      <hr class="hr" style="height:2px;background:linear-gradient(90deg,var(--red),transparent);margin:8px 0 16px;border:none">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span style="letter-spacing:2px">侠名：</span>
+        <input class="wuxia-input" id="name-input" maxlength="12" placeholder="无名侠客">
+      </div>
+      <div class="sect-grid" id="sect-grid"></div>
+      <div style="margin-top:18px;text-align:center">
+        <button class="btn btn-primary" id="btn-start" style="font-size:18px;padding:11px 44px;letter-spacing:6px">出 峡 谷 · 入 江 湖</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-home" class="screen">
+    <div class="statusbar">
+      <div class="who" id="sb-name"></div>
+      <div class="bars">
+        <div class="bar hp"><i id="sb-hp-t"></i><div class="fill" id="sb-hp-f"></div></div>
+        <div class="bar mp"><i id="sb-mp-t"></i><div class="fill" id="sb-mp-f"></div></div>
+        <div class="bar xp"><i></i><div class="fill" id="sb-xp-f"></div></div>
+      </div>
+      <div class="silver-line" id="sb-silver"></div>
+      <div class="title-line" id="sb-title"></div>
+    </div>
+
+    <div class="panel" id="loc-panel">
+      <div class="loc-head"><h2 id="loc-name"></h2><span class="sub" id="loc-sub"></span></div>
+      <div class="loc-desc" id="loc-desc"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-explore">探 索</button>
+        <button class="btn btn-primary" id="btn-boss" style="display:none"></button>
+        <button class="btn" id="btn-travel">江湖舆图</button>
+        <button class="btn" id="btn-companions">伙 伴</button>
+        <button class="btn btn-gold" id="btn-bounty">悬赏榜</button>
+        <button class="btn btn-gold" id="btn-forge">锻 造</button>
+        <button class="btn btn-jade" id="btn-tournament">比武大会</button>
+        <button class="btn" id="btn-titles">称 号</button>
+        <button class="btn" id="btn-rest">客栈歇息</button>
+        <button class="btn" id="btn-train">打坐修炼</button>
+        <button class="btn" id="btn-shop">飞鸽购药</button>
+        <button class="btn" id="btn-bag">行 囊</button>
+        <button class="btn" id="btn-skills">武 学</button>
+      </div>
+      <div class="comp-strip" id="comp-strip"></div>
+      <div class="quest-box" id="quest-box"></div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <div style="letter-spacing:3px;color:var(--text-dim);font-size:14px;margin-bottom:4px">— 江湖见闻 —</div>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <div id="screen-battle" class="screen">
+    <div class="panel battle-stage" id="battle-stage">
+      <div class="enemy-name" id="en-name"></div>
+      <div class="enemy-flavor" id="en-flavor"></div>
+      <div class="enemy-hp-wrap">
+        <div class="bar hp"><i id="en-hp-t"></i><div class="fill" id="en-hp-f"></div></div>
+      </div>
+    </div>
+    <div class="vs">— 你与同伴 —</div>
+    <div class="panel" style="margin-top:2px">
+      <div id="bt-comps" class="comp-strip" style="margin-bottom:8px"></div>
+      <div class="bars" style="margin-bottom:10px">
+        <div class="bar hp"><i id="bt-hp-t"></i><div class="fill" id="bt-hp-f"></div></div>
+        <div class="bar mp"><i id="bt-mp-t"></i><div class="fill" id="bt-mp-f"></div></div>
+      </div>
+      <div id="battle-log"></div>
+      <div class="skill-btns" id="battle-actions"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-root"><div class="overlay"></div></div>
+
+<script>
